@@ -5,7 +5,10 @@ VS Code extension to generate Git commit messages via OpenRouter.
 ## Features
 - One button next to the star in SCM input box
 - Context-rich prompt (branch, staged name-status, staged patch, recent commits)
+- Project tree renders as an indented tree with clear status chips (e.g., [Modified], [New])
 - Include/ignore globs, size caps per file and total
+- Lists up to 10 prior commit titles per touched file (configurable)
+- Captures open editor tabs, recent integrated terminal output, and large file snapshots when a file has 3+ staged hunks
 - Stage-all confirm when no staged changes
 - OpenRouter chat/completions by default, Responses Alpha compatible
 - Output channel logs + 'Show Last Payload' for debugging
@@ -34,6 +37,13 @@ VS Code extension to generate Git commit messages via OpenRouter.
   "karsCommitAI.model": "google/gemini-2.5-flash-lite",
   "karsCommitAI.endpoint": "https://openrouter.ai/api/v1/chat/completions",
   "karsCommitAI.endpointRewrite": true,
-  "karsCommitAI.transport": "fetch"
+  "karsCommitAI.transport": "fetch",
+  "karsCommitAI.logPromptMaxChars": 0
 }
 ```
+
+### 🆕 New Settings
+- **`karsCommitAI.logPromptMaxChars`** (default: `0`)
+  - `0` = unlimited (logs entire prompt - useful for debugging)
+  - `> 0` = truncates prompt log to N characters
+  - 프롬프트 전체를 보고 싶으면 `0`으로 설정하세요!

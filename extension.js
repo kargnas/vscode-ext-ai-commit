@@ -7,31 +7,153 @@ const os = require('os');
 let out;
 let lastPayload = null;
 let lastContext = null;
+let terminalBuffer = [];
+let terminalRemainder = '';
+let terminalBufferHardLimit = 800;
 
 function log(...args){ (out||=vscode.window.createOutputChannel('Kars Commit AI')).appendLine(args.join(' ')); }
 function show(){ (out||=vscode.window.createOutputChannel('Kars Commit AI')).show(true); }
 function logSection(title, body){ log(`[${title}]`); (body||'').split(/\r?\n/).forEach(line=>log(line)); }
 
-const SYSTEM_PROMPT = `You are a senior software engineer who writes precise Conventional Commits.
-Goal: infer the author's real intent behind code changes and produce a commit message that explains WHAT changed and, more importantly, WHY it changed.
+function stripAnsi(text){
+  if(!text) return '';
+  return String(text)
+    .replace(/\u001b\[[0-9;:?]*[ -\/]*[@-~]/g, '') // CSI sequences
+    .replace(/[\u0007\u0008]/g, '');
+}
 
-Constraints:
-- Use Conventional Commits: {type}({scope}): {subject}
-- Allowed types: feat, fix, perf, refactor, style, docs, test, build, ci, chore, revert.
-- Subject: imperative mood, ≤ 72 chars, no trailing period, British English spelling.
-- Scope: derive from top-level package/folder or service name (e.g., api, web, infra).
-- Body: 1–4 lines. Focus on 'why' and trade-offs; mention risk or impact plainly.
-- Footer: 
-  - 'BREAKING CHANGE:' if any public API/contract change.
-  - Issue links (e.g., Closes #123) when reliably detected.
-Hard rules:
-- Do not hallucinate tickets or metrics. If unsure, omit.
-- If changes are purely formatting or comments: use style/chore with concise subject.
-- Prefer fix over refactor when the change is motivated by a bug/test failure.
-- Prefer perf when the change measurably reduces complexity or allocations/queries.
-Output format:
-- Return JSON with fields: {type, scope, subject, body, breaking_change, issues, rationale}.
-- 'rationale' is a terse 1–3 sentence audit note and is NOT part of the commit message.`;
+function pushTerminalData(chunk){
+  if(!chunk) return;
+  const sanitized = stripAnsi(chunk).replace(/\r/g, '\n');
+  const merged = terminalRemainder + sanitized;
+  const parts = merged.split('\n');
+  terminalRemainder = parts.pop() || '';
+  for(const line of parts){
+    terminalBuffer.push(line);
+    if(terminalBuffer.length > terminalBufferHardLimit){
+      terminalBuffer = terminalBuffer.slice(-terminalBufferHardLimit);
+    }
+  }
+}
+
+function setTerminalBufferHardLimit(limit){
+  const parsed = Number(limit);
+  if(Number.isFinite(parsed) && parsed > 50){
+    terminalBufferHardLimit = Math.floor(parsed);
+  }
+  if(terminalBuffer.length > terminalBufferHardLimit){
+    terminalBuffer = terminalBuffer.slice(-terminalBufferHardLimit);
+  }
+}
+
+function getTerminalSnapshot(lines){
+  const count = Math.max(0, Math.min(Number(lines) || 0, terminalBuffer.length));
+  if(!count) return [];
+  return terminalBuffer.slice(-count);
+}
+
+function clampNumber(value, fallback, min, max){
+  const num = Number(value);
+  if(!Number.isFinite(num)) return fallback;
+  let result = Math.floor(num);
+  if(typeof min === 'number' && result < min) result = min;
+  if(typeof max === 'number' && result > max) result = max;
+  return result;
+}
+
+const SYSTEM_PROMPT = `<role>You are a terse senior engineer writing ultra-concise Conventional Commits.</role>
+
+<principles>
+- Obey every rule exactly.
+- Output JSON only; no prose outside JSON.
+</principles>
+
+<critical_rules>
+- Subject: imperative, ≤ 72 chars, British English, no period.
+- Scope: top-level module (api, context, config) or empty.
+- Body: either "" or 1-3 lines. Each line must start with "- " and contain ≤ 8 words.
+- Never include sentences such as "This commit" or introductions like "Key changes".
+- Never enumerate every file or config flag; cluster concepts.
+- Never mention git internals, blame context, or metadata markers.
+</critical_rules>
+
+<format>
+- Format: {type}({scope}): {subject}
+- Allowed types: feat, fix, perf, refactor, style, docs, test, build, ci, chore, revert
+</format>
+
+<guidance>
+- Focus on user-facing intent or effect.
+- Merge multi-step changes into two concise themes.
+- Leave body "" if nothing meaningful to add.
+</guidance>
+
+<examples>
+✅ GOOD - Config tweak:
+{
+  "type": "feat",
+  "scope": "config",
+  "subject": "allow unlimited prompt logging",
+  "body": "- Enable full prompt logging\n- Helps debugging failures quickly",
+  "breaking_change": "",
+  "issues": [],
+  "rationale": "Exposes entire prompt for troubleshooting"
+}
+
+✅ GOOD - Context expansion:
+{
+  "type": "feat",
+  "scope": "context",
+  "subject": "capture editor and terminal context",
+  "body": "- Include active editor tabs\n- Attach last terminal snippet",
+  "breaking_change": "",
+  "issues": [],
+  "rationale": "Provides richer cues for AI"
+}
+
+✅ GOOD - Broader update, still tight:
+{
+  "type": "feat",
+  "scope": "context",
+  "subject": "surface richer workspace signals",
+  "body": "- Log open tabs for ai context\n- Add recent terminal snippet\n- Snapshot heavy diffs briefly",
+  "breaking_change": "",
+  "issues": [],
+  "rationale": "Three short bullets stay focused"
+}
+
+❌ BAD - Verbose rundown:
+{
+  "type": "feat",
+  "scope": "context",
+  "subject": "enhance context collection",
+  "body": "This commit significantly expands the context provided.\n\nKey additions include:\n- Capturing open editor tabs\n- Including terminal output\n- Adding file snapshots\n- Improving tree rendering",
+  "breaking_change": "",
+  "issues": [],
+  "rationale": "Too verbose and enumerates details"
+}
+</examples>
+
+<hard_rules>
+1. Use ≤ 3 bullet lines; prefer 2 or fewer.
+2. Each bullet ≤ 8 words.
+3. No prose outside bullets.
+4. No duplicate information already obvious from diff.
+5. No fabricated issues or metrics.
+</hard_rules>
+
+<output_format>
+Return JSON with keys:
+{
+  "type": "feat|fix|etc",
+  "scope": "module name",
+  "subject": "≤72 chars",
+  "body": "" or "- point one\n- point two",
+  "breaking_change": "",
+  "issues": [],
+  "rationale": "1 line internal note"
+}
+</output_format>`;
 
 const ALLOWED_TYPES = ['feat','fix','perf','refactor','style','docs','test','build','ci','chore','revert'];
 
@@ -69,7 +191,14 @@ function getConfig(){
     maxPatchBytes: c.get('karsCommitAI.maxPatchBytes') || 50000,
     referer: c.get('karsCommitAI.referer') || 'https://kargn.as',
     title: c.get('karsCommitAI.title') || 'kars - Commit AI',
-    systemPrompt: (compat ? compat + '\n\n' : '') + (c.get('karsCommitAI.systemPrompt') || SYSTEM_PROMPT)
+    systemPrompt: (compat ? compat + '\n\n' : '') + (c.get('karsCommitAI.systemPrompt') || SYSTEM_PROMPT),
+    previousCommitLimit: clampNumber(c.get('karsCommitAI.previousCommitLimit'), 10, 1, 25),
+    openTabsLimit: clampNumber(c.get('karsCommitAI.openTabsLimit'), 10, 0, 40),
+    terminalLogLines: clampNumber(c.get('karsCommitAI.terminalLogLines'), 20, 0, 200),
+    projectTreeMaxEntries: clampNumber(c.get('karsCommitAI.projectTreeMaxEntries'), 400, 50, 1200),
+    heavyDiffMaxLines: clampNumber(c.get('karsCommitAI.heavyDiffMaxLines'), 500, 50, 1000),
+    heavyDiffMaxFiles: clampNumber(c.get('karsCommitAI.heavyDiffMaxFiles'), 3, 0, 6),
+    logPromptMaxChars: clampNumber(c.get('karsCommitAI.logPromptMaxChars'), 0, 0, 1000000)
   };
 }
 
@@ -198,14 +327,33 @@ function parseJSONSafely(text){
   return null;
 }
 
-async function buildProjectTree(repo, cwd){
+async function buildProjectTree(repo, cwd, cfg, stagedStatusMap){
   const trackedRes = await execFile('git', ['ls-files'], cwd).catch(()=>({ stdout:'' }));
   const untrackedRes = await execFile('git', ['ls-files','--others','--exclude-standard'], cwd).catch(()=>({ stdout:'' }));
-  const normalize = (p)=>p.split('\\').join('/');
-  const tracked = trackedRes.stdout.split('\n').map(x=>x.trim()).filter(Boolean).map(normalize);
-  const untracked = untrackedRes.stdout.split('\n').map(x=>x.trim()).filter(Boolean).map(normalize);
+  const normalize = (p)=>{
+    // Remove git's quoting for special characters
+    let cleaned = p.trim();
+    if(cleaned.startsWith('"') && cleaned.endsWith('"')){
+      cleaned = cleaned.slice(1, -1);
+      // Unescape git's escape sequences (handles octal like \345)
+      cleaned = cleaned.replace(/\\([0-7]{3})/g, (_, oct) => {
+        return String.fromCharCode(parseInt(oct, 8));
+      });
+      cleaned = cleaned.replace(/\\([\\"])/g, '$1');
+    }
+    // Normalize path separators and filter invalid paths
+    cleaned = cleaned.split('\\').join('/');
+    // Reject paths with suspicious patterns
+    if(cleaned.includes('//') || cleaned.includes('/../') || cleaned.startsWith('..')) return null;
+    return cleaned;
+  };
+  const tracked = trackedRes.stdout.split('\n').map(normalize).filter(Boolean);
+  const untracked = untrackedRes.stdout.split('\n').map(normalize).filter(Boolean);
   const statusMap = new Map();
-  const ensure = (rel)=>{ if(!statusMap.has(rel)) statusMap.set(rel, { staged:false, unstaged:false, merge:false, untracked:false }); return statusMap.get(rel); };
+  const ensure = (rel)=>{
+    if(!statusMap.has(rel)) statusMap.set(rel, { staged:false, unstaged:false, merge:false, untracked:false, codes:new Set() });
+    return statusMap.get(rel);
+  };
 
   const addChanges = (changes, key)=>{
     (changes||[]).forEach(change=>{
@@ -215,27 +363,222 @@ async function buildProjectTree(repo, cwd){
       if(!rel || rel.startsWith('..')) return;
       const norm = normalize(rel);
       ensure(norm)[key] = true;
+      const statusCode = stagedStatusMap?.get(norm);
+      if(statusCode){ ensure(norm).codes.add(statusCode); }
     });
   };
 
   addChanges(repo.state.indexChanges, 'staged');
   addChanges(repo.state.workingTreeChanges, 'unstaged');
   addChanges(repo.state.mergeChanges, 'merge');
-  untracked.forEach(rel=>{ ensure(rel).untracked = true; });
+  untracked.forEach(rel=>{ ensure(rel).untracked = true; ensure(rel).codes.add('A'); });
 
-  const files = Array.from(new Set([...tracked, ...untracked, ...statusMap.keys()])).sort();
-  return files.slice(0, 400).map(rel=>{
-    const info = statusMap.get(rel);
-    const flags = [];
-    if(info){
-      if(info.merge) flags.push('M');
-      if(info.staged) flags.push('S');
-      if(info.unstaged) flags.push('W');
-      if(info.untracked) flags.push('?');
-    }
-    const marker = flags.length ? flags.join('') : 'C';
-    return `${marker} ${rel}`;
+  const explicitStatusMap = stagedStatusMap || new Map();
+  explicitStatusMap.forEach((code, rel)=>{
+    ensure(rel).codes.add(code);
   });
+
+  const allFiles = Array.from(new Set([...tracked, ...untracked, ...statusMap.keys()])).sort();
+  const withSignals = allFiles.filter(rel=>{
+    const info = statusMap.get(rel);
+    if(!info) return false;
+    return info.merge || info.staged || info.unstaged || info.untracked || (info.codes && info.codes.size);
+  });
+  const candidateFiles = withSignals.length ? withSignals : allFiles;
+  const maxEntries = cfg?.projectTreeMaxEntries || 400;
+  const limitedFiles = candidateFiles.slice(0, maxEntries);
+
+  const root = createTreeNode('.', '', true);
+  const seenPaths = new Set();
+  const maxDepth = 20; // Prevent too deep trees
+
+  limitedFiles.forEach(rel=>{
+    // Prevent duplicates and circular references
+    if(seenPaths.has(rel)) return;
+    seenPaths.add(rel);
+
+    const info = statusMap.get(rel);
+    const parts = rel.split('/').filter(Boolean); // Remove empty parts
+    if(!parts.length || parts.length > maxDepth) return;
+
+    // Skip paths with suspicious patterns
+    if(parts.some(part => !part || !part.trim() || part === '.' || part === '..' || part.startsWith(' ') || part.endsWith(' ') || part.length > 255)) return;
+
+    let node = root;
+    let depth = 0;
+    parts.forEach((part, idx)=>{
+      if(depth++ >= maxDepth) return; // Safety check
+      const isLeaf = idx === parts.length - 1;
+      const key = part;
+      if(!node.children.has(key)){
+        node.children.set(key, createTreeNode(part, node.fullPath ? `${node.fullPath}/${part}` : part, !isLeaf));
+      }
+      node = node.children.get(key);
+      if(isLeaf){
+        node.isDir = false;
+        node.info = info ? cloneStatusInfo(info) : createStatusInfo();
+      }
+    });
+  });
+
+  propagateNodeFlags(root);
+  const lines = [];
+  const rootLabels = flagsToLabels(root.flags);
+  const rootLine = rootLabels.length ? `./ ${rootLabels.map(label=>`[${label}]`).join(' ')}` : './';
+  lines.push(rootLine.trim());
+  renderTree(root, '', lines, maxEntries);
+  return lines.slice(0, maxEntries);
+}
+
+function createStatusInfo(init){
+  const base = { merge:false, staged:false, unstaged:false, untracked:false, codes:new Set() };
+  if(init){
+    base.merge = !!init.merge;
+    base.staged = !!init.staged;
+    base.unstaged = !!init.unstaged;
+    base.untracked = !!init.untracked;
+    if(init.codes){ Array.from(init.codes).forEach(code=>base.codes.add(code)); }
+  }
+  return base;
+}
+
+function cloneStatusInfo(info){
+  return createStatusInfo(info);
+}
+
+function createTreeNode(name, fullPath, isDir){
+  return {
+    name,
+    fullPath,
+    isDir,
+    children: new Map(),
+    info: null,
+    flags: createStatusInfo(),
+    codes: new Set()
+  };
+}
+
+function mergeFlags(target, source){
+  if(!source) return target;
+  target.merge = target.merge || !!source.merge;
+  target.staged = target.staged || !!source.staged;
+  target.unstaged = target.unstaged || !!source.unstaged;
+  target.untracked = target.untracked || !!source.untracked;
+  if(source.codes){
+    Array.from(source.codes).forEach(code=> target.codes.add(code));
+  }
+  return target;
+}
+
+function propagateNodeFlags(node){
+  if(node.info){
+    mergeFlags(node.flags, node.info);
+  }
+  for(const child of node.children.values()){
+    propagateNodeFlags(child);
+    mergeFlags(node.flags, child.flags);
+  }
+}
+
+function renderTree(node, prefix, lines, maxEntries, visited = new Set(), depth = 0){
+  const maxDepth = 25; // Hard limit for rendering depth
+
+  // Prevent circular reference in tree rendering
+  if(visited.has(node.fullPath)) {
+    lines.push(prefix + '(circular reference detected)');
+    return;
+  }
+
+  // Prevent too deep trees
+  if(depth >= maxDepth) {
+    lines.push(prefix + '(max depth reached)');
+    return;
+  }
+
+  visited.add(node.fullPath);
+
+  const entries = Array.from(node.children.values()).sort(compareTreeNodes);
+  const count = entries.length;
+  entries.forEach((child, index)=>{
+    if(lines.length >= maxEntries) return;
+    const isLast = index === count - 1;
+    const connector = isLast ? '└─ ' : '├─ ';
+    const childPrefix = prefix + (isLast ? '   ' : '│  ');
+    lines.push(prefix + connector + formatTreeNode(child));
+    if(lines.length >= maxEntries) return;
+    if(child.isDir && child.children.size){
+      renderTree(child, childPrefix, lines, maxEntries, visited, depth + 1);
+    }
+  });
+}
+
+function compareTreeNodes(a, b){
+  if(a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+  return a.name.localeCompare(b.name);
+}
+
+function formatTreeNode(node){
+  const name = node.isDir ? `${node.name}/` : node.name;
+  const labels = flagsToLabels(node.flags);
+  if(!labels.length) return name;
+  return `${name} ${labels.map(label=>`[${label}]`).join(' ')}`.trim();
+}
+
+function flagsToLabels(flags){
+  const seen = new Set();
+  if(flags?.merge) seen.add('Conflict');
+  if(flags?.untracked) seen.add('New');
+  if(flags?.unstaged) seen.add('Modified');
+  if(flags?.staged) seen.add('Staged');
+  if(flags?.codes){
+    Array.from(flags.codes).forEach(code=>{
+      const label = codeToLabel(code);
+      if(label) seen.add(label);
+    });
+  }
+  return Array.from(seen.values());
+}
+
+function codeToLabel(code){
+  if(!code) return '';
+  const c = String(code).charAt(0).toUpperCase();
+  switch(c){
+    case 'A': return 'New';
+    case 'M': return 'Modified';
+    case 'D': return 'Deleted';
+    case 'R': return 'Renamed';
+    case 'C': return 'Copied';
+    case 'U': return 'Unmerged';
+    default: return '';
+  }
+}
+
+function parseNameStatusToMap(lines){
+  const map = new Map();
+  (lines||[]).forEach(line=>{
+    if(!line) return;
+    const parts = line.split('\t');
+    if(parts.length < 2) return;
+    const statusRaw = parts[0] || '';
+    const statusCode = statusRaw.replace(/[0-9]/g, '') || statusRaw;
+    let lastPath = parts[parts.length - 1];
+    if(lastPath){
+      // Remove git's quoting for special characters
+      if(lastPath.startsWith('"') && lastPath.endsWith('"')){
+        lastPath = lastPath.slice(1, -1);
+        // Unescape git's octal sequences
+        lastPath = lastPath.replace(/\\([0-7]{3})/g, (_, oct) => {
+          return String.fromCharCode(parseInt(oct, 8));
+        });
+        lastPath = lastPath.replace(/\\([\\"])/g, '$1');
+      }
+      const normalized = lastPath.split('\\').join('/');
+      // Skip invalid paths
+      if(normalized.includes('//') || normalized.includes('/../') || normalized.startsWith('..')) return;
+      map.set(normalized, statusCode.charAt(0).toUpperCase());
+    }
+  });
+  return map;
 }
 
 function parseDiffByFile(diff){
@@ -286,25 +629,6 @@ function parseHunks(diff){
   return entries;
 }
 
-async function collectBlameContexts(cwd, hunks){
-  const results = [];
-  for(const entry of hunks){
-    const filePath = entry.file;
-    if(!filePath) continue;
-    for(const hunk of entry.hunks){
-      const start = Math.max(hunk.start - 2, 1);
-      const end = hunk.start + Math.max(hunk.count, 1) + 2;
-      try {
-        const { stdout } = await execFile('git', ['blame', `-L`, `${start},${end}`, '--', filePath], cwd);
-        results.push({ path: filePath, hunk: hunk.header, blame_lines: stdout.split('\n').filter(Boolean) });
-      } catch {
-        // ignore new files
-      }
-    }
-  }
-  return results;
-}
-
 function summariseFile(pathname, diffText){
   const change_kind = pathname.includes(' -> ') ? 'renamed' : 'modified';
   const symbols_changed = extractSymbols(diffText);
@@ -318,18 +642,135 @@ function summariseFile(pathname, diffText){
   return { path: pathname, change_kind, symbols_changed, high_level, intent_guess, risk };
 }
 
-async function collectHistoryForFiles(cwd, files){
-  const entries = new Set();
+function collectOpenTabs(cwd, limit){
+  const max = Math.max(0, Number(limit) || 0);
+  if(max === 0) return [];
+  const entries = new Map();
+  const order = [];
+  const toRel = (uri)=>{
+    if(!uri?.fsPath) return null;
+    const rel = path.relative(cwd, uri.fsPath);
+    if(!rel || rel.startsWith('..')) return null;
+    return rel || '.';
+  };
+
+  const record = (label, meta)=>{
+    if(!label) return;
+    if(!entries.has(label)){
+      entries.set(label, new Set());
+      order.push(label);
+    }
+    const set = entries.get(label);
+    (meta||[]).filter(Boolean).forEach(tag=> set.add(tag));
+  };
+
+  const describeTab = (tab)=>{
+    if(!tab) return null;
+    const input = tab.input;
+    const candidate = input?.uri || input?.modified || input?.original || input?.notebookUri || null;
+    const label = toRel(candidate) || tab.label;
+    if(!label) return null;
+    const meta = [];
+    if(tab.isActive) meta.push('Active');
+    if(tab.isDirty) meta.push('Dirty');
+    if(tab.isPinned) meta.push('Pinned');
+    if(tab.isPreview) meta.push('Preview');
+    return { label, meta };
+  };
+
+  const groups = vscode.window.tabGroups?.all || [];
+  const activeGroup = vscode.window.tabGroups?.activeTabGroup;
+  if(activeGroup){
+    activeGroup.tabs.forEach(tab=>{
+      const info = describeTab(tab);
+      if(info) record(info.label, info.meta);
+    });
+  }
+  groups.forEach(group=>{
+    if(group === activeGroup) return;
+    group.tabs.forEach(tab=>{
+      const info = describeTab(tab);
+      if(info) record(info.label, info.meta);
+    });
+  });
+
+  (vscode.window.visibleTextEditors||[]).forEach(editor=>{
+    const label = toRel(editor.document?.uri) || editor.document?.fileName || editor.document?.uri?.toString();
+    if(!label) return;
+    const meta = [];
+    if(editor.document?.isDirty) meta.push('Dirty');
+    if(editor === vscode.window.activeTextEditor && !meta.includes('Active')) meta.push('Active');
+    record(label, meta);
+  });
+
+  const list = order.map(label=>{
+    const meta = Array.from(entries.get(label).values());
+    return meta.length ? `${label} [${meta.join(', ')}]` : label;
+  });
+
+  return list.slice(0, max);
+}
+
+async function collectHeavyDiffSnapshots(cwd, hunks, cfg){
+  const maxFiles = Math.max(0, Number(cfg?.heavyDiffMaxFiles) || 0);
+  if(maxFiles === 0) return [];
+  const maxLines = Math.max(10, Number(cfg?.heavyDiffMaxLines) || 500);
+  const snapshots = [];
+  const seen = new Set();
+  for(const entry of hunks){
+    const filePath = entry?.file;
+    if(!filePath || seen.has(filePath)) continue;
+    if(!Array.isArray(entry.hunks) || entry.hunks.length < 3) continue;
+    const content = await readStagedFile(cwd, filePath);
+    if(!content) continue;
+    const truncated = content.split(/\r?\n/).slice(0, maxLines).join('\n');
+    snapshots.push({ path: filePath, content: truncated });
+    seen.add(filePath);
+    if(snapshots.length >= maxFiles) break;
+  }
+  return snapshots;
+}
+
+async function readStagedFile(cwd, relPath){
+  if(!relPath) return '';
+  try {
+    const { stdout } = await execFile('git', ['show', `:${relPath}`], cwd);
+    if(stdout && !stdout.includes('\u0000')) return stdout;
+  } catch {
+    // fall through
+  }
+  try {
+    const abs = path.join(cwd, relPath);
+    if(fs.existsSync(abs)){
+      const data = fs.readFileSync(abs, 'utf8');
+      if(data && !data.includes('\u0000')) return data;
+    }
+  } catch {
+    // ignore
+  }
+  return '';
+}
+
+async function collectHistoryForFiles(cwd, files, limit){
+  const maxTotal = Math.max(1, Number(limit) || 1);
+  const perFile = Math.min(maxTotal, 25);
+  const results = [];
+  const seen = new Set();
   for(const file of files){
     if(!file) continue;
     try {
-      const { stdout } = await execFile('git', ['log','--pretty=%h %s','-n','3','--', file], cwd);
-      stdout.split('\n').filter(Boolean).forEach(line=> entries.add(line));
+      const { stdout } = await execFile('git', ['log','--pretty=%s','-n', String(perFile),'--', file], cwd);
+      stdout.split('\n').map(x=>x.trim()).filter(Boolean).forEach(line=>{
+        if(seen.has(line) || !line) return;
+        seen.add(line);
+        results.push(line);
+      });
+      if(results.length >= maxTotal) break;
     } catch {
       // ignore
     }
   }
-  return Array.from(entries).slice(0, 3);
+  return results.slice(0, maxTotal);
 }
 
 function detectTestChanges(nameStatusLines){
@@ -369,10 +810,14 @@ async function collectContext(repo, cfg){
   const branchHints = parseBranchHints(currentBranch);
 
   const nameStatusLines = diffNameStatus ? diffNameStatus.split('\n').filter(Boolean) : [];
+  const stagedStatusMap = parseNameStatusToMap(nameStatusLines);
   const fileDiffs = parseDiffByFile(diffUnified);
-  const blameEntries = parseHunks(diffUnifiedZero);
-  const blameContext = await collectBlameContexts(cwd, blameEntries);
-  const previousCommits = await collectHistoryForFiles(cwd, Object.keys(fileDiffs));
+  const heavyHunks = parseHunks(diffUnifiedZero);
+  const previousCommits = await collectHistoryForFiles(cwd, Object.keys(fileDiffs), cfg.previousCommitLimit);
+  const heavyDiffSnapshots = await collectHeavyDiffSnapshots(cwd, heavyHunks, cfg);
+  const openTabs = collectOpenTabs(cwd, cfg.openTabsLimit);
+  setTerminalBufferHardLimit(Math.max(cfg.terminalLogLines * 5, 200));
+  const terminalRecent = getTerminalSnapshot(cfg.terminalLogLines);
 
   const fileSummaries = Object.entries(fileDiffs).map(([file, diff])=> summariseFile(file, diff));
 
@@ -401,8 +846,10 @@ async function collectContext(repo, cfg){
     db_schema_changes: [],
     test_changes: detectTestChanges(nameStatusLines),
     diffs: diffUnified,
-    blame_context: blameContext,
-    project_tree: await buildProjectTree(repo, cwd)
+    project_tree: await buildProjectTree(repo, cwd, cfg, stagedStatusMap),
+    open_tabs: openTabs,
+    terminal_recent: terminalRecent,
+    heavy_diff_snapshots: heavyDiffSnapshots
   };
 
   lastContext = context;
@@ -417,51 +864,82 @@ function buildUserPrompt(context){
   const routesJson = JSON.stringify(context.routes_schema_changes, null, 2);
   const dbJson = JSON.stringify(context.db_schema_changes, null, 2);
   const testsJson = JSON.stringify(context.test_changes, null, 2);
-  const blameJson = JSON.stringify(context.blame_context, null, 2);
   const projectTree = (context.project_tree || []).join('\n');
+  const openTabs = (context.open_tabs || []).join('\n');
+  const terminalRecent = (context.terminal_recent || []).join('\n');
+  const heavySnapshots = (context.heavy_diff_snapshots || []).map(entry=> {
+    const header = `# ${entry.path}`;
+    const body = entry.content || '';
+    return `${header}\n${body}`;
+  }).join('\n\n');
 
-  return `Analyse the following repository context and staged diffs to infer intent and produce a commit message.
+  return `<instructions>
+Analyse the following repository context and staged diffs to infer the author's intent and produce a commit message.
+</instructions>
 
-REPO_META
-- repo_name: ${meta.repo_name}
-- default_branch: ${meta.default_branch}
-- current_branch: ${meta.current_branch}
-- languages: ${JSON.stringify(meta.languages)}
-- commit_convention: Conventional Commits
-- service_map: ${JSON.stringify(meta.service_map)}
+<context>
+<repo_meta>
+<repo_name>${meta.repo_name}</repo_name>
+<default_branch>${meta.default_branch}</default_branch>
+<current_branch>${meta.current_branch}</current_branch>
+<languages>${JSON.stringify(meta.languages)}</languages>
+<commit_convention>Conventional Commits</commit_convention>
+<service_map>${JSON.stringify(meta.service_map)}</service_map>
+</repo_meta>
 
-INTENT_SIGNALS
-- branch_hints: ${JSON.stringify(intent.branch_hints)}
-- recent_test_failures: ${JSON.stringify(intent.recent_test_failures)}
-- linter_type_errors: ${JSON.stringify(intent.linter_type_errors)}
-- related_issues: ${JSON.stringify(intent.related_issues_summary)}
-- previous_commits_touching_same_symbols: ${JSON.stringify(intent.previous_commits_touching_same_symbols)}
+<intent_signals>
+<branch_hints>${JSON.stringify(intent.branch_hints)}</branch_hints>
+<recent_test_failures>${JSON.stringify(intent.recent_test_failures)}</recent_test_failures>
+<linter_type_errors>${JSON.stringify(intent.linter_type_errors)}</linter_type_errors>
+<related_issues>${JSON.stringify(intent.related_issues_summary)}</related_issues>
+<previous_commits>${JSON.stringify(intent.previous_commits_touching_same_symbols)}</previous_commits>
+</intent_signals>
 
-PROJECT_TREE
+<project_tree>
 ${projectTree || '(empty)'}
+</project_tree>
 
-FILE_SUMMARIES
+<open_tabs>
+${openTabs || '(none)'}
+</open_tabs>
+
+<terminal_recent>
+${terminalRecent || '(none)'}
+</terminal_recent>
+
+<file_summaries>
 ${fileSummariesJson}
+</file_summaries>
 
-DIFFS
+<diffs>
 ${context.diffs}
+</diffs>
 
-BLAME_CONTEXT
-${blameJson}
+<heavy_diff_snapshots>
+${heavySnapshots || '(none)'}
+</heavy_diff_snapshots>
 
-AST_IMPACT
+<ast_impact>
 ${astImpactJson}
+</ast_impact>
 
-ROUTES_SCHEMA_CHANGES
+<routes_schema_changes>
 ${routesJson}
+</routes_schema_changes>
 
-DB_SCHEMA_CHANGES
+<db_schema_changes>
 ${dbJson}
+</db_schema_changes>
 
-TEST_CHANGES
+<test_changes>
 ${testsJson}
+</test_changes>
+</context>
 
-Generate JSON: {type, scope, subject, body, breaking_change, issues, rationale}.`;
+<task>
+Using all the context provided above, generate a JSON response with the following structure:
+{type, scope, subject, body, breaking_change, issues, rationale}
+</task>`;
 }
 
 function buildCommitMessage(parsed){
@@ -519,8 +997,22 @@ async function httpPost(cfg, payload, prompts){
   const stamp = new Date().toISOString();
   log(`[info] ${stamp} model=${cfg.model}`);
   log(`[info] endpoint=${cfg.endpoint}`);
-  if(prompts?.system) logSection('system', prompts.system);
-  if(prompts?.user) logSection('user', prompts.user.slice(0, 2000));
+
+  const maxChars = cfg.logPromptMaxChars || 0;
+  if(prompts?.system){
+    const systemContent = maxChars > 0 ? prompts.system.slice(0, maxChars) : prompts.system;
+    logSection('system', systemContent);
+    if(maxChars > 0 && prompts.system.length > maxChars){
+      log(`... (truncated ${prompts.system.length - maxChars} chars)`);
+    }
+  }
+  if(prompts?.user){
+    const userContent = maxChars > 0 ? prompts.user.slice(0, maxChars) : prompts.user;
+    logSection('user', userContent);
+    if(maxChars > 0 && prompts.user.length > maxChars){
+      log(`... (truncated ${prompts.user.length - maxChars} chars)`);
+    }
+  }
 
   const headers = {
     'Authorization': `Bearer ${cfg.apiKey}`,
@@ -536,7 +1028,7 @@ async function httpPost(cfg, payload, prompts){
     try {
       const res = await fetch(cfg.endpoint, { method:'POST', headers, body: JSON.stringify(payload), signal: controller.signal });
       const text = await res.text();
-      if(cfg.logRaw) logSection('raw-head', text.slice(0, 1000));
+      if(cfg.logRaw) logSection('response', text.slice(0, 1000));
       if(!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 400)}`);
       const ct = res.headers.get('content-type') || '';
       if(!ct.includes('json')) return text;
@@ -558,7 +1050,7 @@ async function httpPost(cfg, payload, prompts){
       cfg.endpoint
     ].join(' ');
     const { stdout } = await exec(cmd, process.cwd());
-    if(cfg.logRaw) logSection('raw-head', String(stdout).slice(0,1000));
+    if(cfg.logRaw) logSection('response', String(stdout).slice(0,1000));
     try { return JSON.parse(stdout); } catch { return stdout; }
   }
 
@@ -587,7 +1079,7 @@ async function generate(){
 
     const rawResponse = await httpPost(cfg, payload, { system: systemPrompt, user: userPrompt });
     const text = coerceResponse(rawResponse);
-    logSection('model-output', text.slice(0, 2000));
+    logSection('model-output', text);
     const parsed = parseJSONSafely(text);
     if(!parsed){
       vscode.window.showErrorMessage('Model response was not valid JSON. See output for details.');
@@ -624,6 +1116,7 @@ function showLast(){
 
 function activate(context){
   log('Kars Commit AI activated at ' + new Date().toISOString());
+  // Terminal capture removed: onDidWriteTerminalData requires proposed API
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.showLastPayload', showLast));

@@ -39,6 +39,15 @@ if [ ! -f "$VSIX_PATH" ]; then
   exit 1
 fi
 
+echo "[cleanup] removing old extension versions" >&2
+EXT_DIR="$HOME/.vscode/extensions"
+if [ -d "$EXT_DIR" ]; then
+  find "$EXT_DIR" -maxdepth 1 -type d -name "kars.kars-commit-ai-*" | while read -r dir; do
+    rm -rf "$dir"
+    echo "  removed $(basename "$dir")" >&2
+  done
+fi
+
 echo "[install] installing $VSIX_NAME into VS Code" >&2
 code --install-extension "$VSIX_PATH" --force
 
