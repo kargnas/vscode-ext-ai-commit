@@ -165,6 +165,11 @@
           "type": "string",
           "default": "kars - Commit AI"
         },
+        "karsCommitAI.commitLanguage": {
+          "type": "string",
+          "default": "auto",
+          "description": "Preferred language for commit subject/body (auto keeps default British English)."
+        },
         "karsCommitAI.systemPrompt": {
           "type": "string",
           "default": "You write excellent Conventional Commits for engineers and PMs."

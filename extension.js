@@ -69,12 +69,13 @@ const SYSTEM_PROMPT = `<role>You are a terse senior engineer writing ultra-conci
 </principles>
 
 <critical_rules>
-- Subject: imperative, ≤ 72 chars, British English, no period.
+- Subject: imperative, ≤ 72 chars, default to British English (override when commit_language specifies otherwise), no period.
 - Scope: top-level module (api, context, config) or empty.
 - Body: either "" or 1-3 lines. Each line must start with "- " and contain ≤ 8 words.
 - Never include sentences such as "This commit" or introductions like "Key changes".
 - Never enumerate every file or config flag; cluster concepts.
 - Never mention git internals, blame context, or metadata markers.
+- Honour any commit_language instruction for subject/body wording while keeping type/scope tokens in English.
 </critical_rules>
 
 <format>
@@ -175,6 +176,8 @@ function normalizeModel(model){
 
 function getConfig(){
   const c = vscode.workspace.getConfiguration();
+  const commitLanguageRaw = c.get('karsCommitAI.commitLanguage');
+  const commitLanguage = commitLanguageRaw === undefined ? '' : String(commitLanguageRaw || '').trim();
   const endpointRaw = c.get('karsCommitAI.endpoint') || 'https://openrouter.ai/api/v1/chat/completions';
   const endpoint = normalizeEndpoint(endpointRaw, !!c.get('karsCommitAI.endpointRewrite'));
   const compat = c.get('dish-ai-commit.features.branchName.systemPrompt', '');
@@ -198,7 +201,8 @@ function getConfig(){
     projectTreeMaxEntries: clampNumber(c.get('karsCommitAI.projectTreeMaxEntries'), 400, 50, 1200),
     heavyDiffMaxLines: clampNumber(c.get('karsCommitAI.heavyDiffMaxLines'), 500, 50, 1000),
     heavyDiffMaxFiles: clampNumber(c.get('karsCommitAI.heavyDiffMaxFiles'), 3, 0, 6),
-    logPromptMaxChars: clampNumber(c.get('karsCommitAI.logPromptMaxChars'), 0, 0, 1000000)
+    logPromptMaxChars: clampNumber(c.get('karsCommitAI.logPromptMaxChars'), 0, 0, 1000000),
+    commitLanguage
   };
 }
 
@@ -325,6 +329,18 @@ function parseJSONSafely(text){
     try { return JSON.parse(cleaned.slice(first, last+1)); } catch {}
   }
   return null;
+}
+
+function normaliseLanguagePreference(pref){
+  if(pref === null || pref === undefined) return 'auto';
+  const value = String(pref).trim();
+  return value ? value : 'auto';
+}
+
+function buildLanguageInstruction(pref){
+  const value = normaliseLanguagePreference(pref);
+  if(value.toLowerCase() === 'auto') return '';
+  return `<language_instruction>Use ${value} for the commit subject, body bullets, and rationale while keeping the Conventional Commit type/scope tokens in English.</language_instruction>`;
 }
 
 async function buildProjectTree(repo, cwd, cfg, stagedStatusMap){
@@ -788,6 +804,7 @@ function detectTestChanges(nameStatusLines){
 
 async function collectContext(repo, cfg){
   const cwd = repo.rootUri.fsPath;
+  const commitLanguage = normaliseLanguagePreference(cfg?.commitLanguage);
   const [diffNameStatus, diffUnifiedRaw, diffUnifiedZeroRaw, branch, remoteUrl, defaultBranchRef] = await Promise.all([
     runGit(cwd, ['diff','--name-status','--cached','--find-renames','--relative'], true),
     runGit(cwd, ['diff','--staged','--find-renames','--unified=3'], true),
@@ -826,6 +843,7 @@ async function collectContext(repo, cfg){
       repo_name: repoName,
       default_branch: defaultBranch,
       current_branch: currentBranch,
+      commit_language: commitLanguage,
       languages,
       commit_convention: 'Conventional Commits',
       service_map: serviceMap
@@ -859,6 +877,7 @@ async function collectContext(repo, cfg){
 function buildUserPrompt(context){
   const meta = context.repo_meta;
   const intent = context.intent_signals;
+  const commitLanguage = meta.commit_language || 'auto';
   const fileSummariesJson = JSON.stringify(context.file_summaries, null, 2);
   const astImpactJson = JSON.stringify(context.ast_impact, null, 2);
   const routesJson = JSON.stringify(context.routes_schema_changes, null, 2);
@@ -882,6 +901,7 @@ Analyse the following repository context and staged diffs to infer the author's 
 <repo_name>${meta.repo_name}</repo_name>
 <default_branch>${meta.default_branch}</default_branch>
 <current_branch>${meta.current_branch}</current_branch>
+<commit_language>${commitLanguage}</commit_language>
 <languages>${JSON.stringify(meta.languages)}</languages>
 <commit_convention>Conventional Commits</commit_convention>
 <service_map>${JSON.stringify(meta.service_map)}</service_map>
@@ -1070,7 +1090,9 @@ async function generate(){
     if(!cfg.apiKey) return vscode.window.showErrorMessage('Set karsCommitAI.apiKey first');
 
     const context = await collectContext(repo, cfg);
-    const systemPrompt = cfg.systemPrompt || SYSTEM_PROMPT;
+    const baseSystemPrompt = cfg.systemPrompt || SYSTEM_PROMPT;
+    const languageInstruction = buildLanguageInstruction(cfg.commitLanguage);
+    const systemPrompt = languageInstruction ? `${baseSystemPrompt}\n${languageInstruction}` : baseSystemPrompt;
     const userPrompt = buildUserPrompt(context);
 
     const payload = isResponses(cfg.endpoint)

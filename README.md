@@ -38,11 +38,14 @@ VS Code extension to generate Git commit messages via OpenRouter.
   "karsCommitAI.endpoint": "https://openrouter.ai/api/v1/chat/completions",
   "karsCommitAI.endpointRewrite": true,
   "karsCommitAI.transport": "fetch",
+  "karsCommitAI.commitLanguage": "ko",
   "karsCommitAI.logPromptMaxChars": 0
 }
 ```
 
 ### 🆕 New Settings
+- **`karsCommitAI.commitLanguage`** (default: `"auto"`)
+  - Subject/body language preference for generated commits. Keep as `"auto"` for English, or supply locale codes like `"ko"`, `"ja"`, `"en-US"`.
 - **`karsCommitAI.logPromptMaxChars`** (default: `0`)
   - `0` = unlimited (logs entire prompt - useful for debugging)
   - `> 0` = truncates prompt log to N characters
