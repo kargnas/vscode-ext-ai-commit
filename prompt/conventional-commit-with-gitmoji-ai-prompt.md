@@ -144,13 +144,12 @@ Format: `<emoji> <type>[optional (<scope>)]: <description>`
 
 ### Body
 
-- Bullet points with "-"
-- Maximum of 100 characters per line including any spaces or special characters
-- Bullet points that exceed the 100 characters per line count should use line breaks without adding extra bullet points
-- Explain what and why
-- Be objective
-- Must be in English
-- Use【】for different types
+- Bullet points with "-" and no trailing punctuation
+- Keep each entry to ≤12 words as a terse fragment (e.g., `env template cleanup`)
+- Focus on what changed; lead with artifact/key/value names when possible
+- Match the requested language (default auto) while keeping Conventional Commit tokens in English
+- Prefer action nouns such as "cleanup", "addition", "removal", "sync" for consistency
+- Use【】sparingly only when classifying change types is essential
 
 ### Footer
 

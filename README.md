@@ -13,6 +13,7 @@ VS Code extension to generate Git commit messages via OpenRouter.
 - OpenRouter chat/completions by default, Responses Alpha compatible
 - Output channel logs + 'Show Last Payload' for debugging
 - Local fallback if AI response is empty
+- Commit body bullets are terse fragments like `env template cleanup` for fast scanning
 
 ## Build
 - Install: `code --install-extension output/<generated>.vsix` after packing.
@@ -29,6 +30,12 @@ VS Code extension to generate Git commit messages via OpenRouter.
 ## Context Pipeline
 - 자동으로 리포 메타/브랜치 힌트/파일 요약/프로젝트 트리를 수집해 LLM에 JSON 구조로 전달합니다.
 - 모델 응답은 {type, scope, subject, body, breaking_change, issues, rationale} JSON으로 파싱되어 커밋 메시지를 구성합니다.
+
+### Commit Body Style
+- Body array entries use succinct fragments such as `env routing cleanup` or `api baseurl addition`.
+- Keep each fragment within 12 words, omit punctuation, and mention the touched artifact/key/value.
+- Finish fragments with action nouns like `cleanup`, `addition`, `removal`, or `sync` for quick scanning.
+- The `karsCommitAI.commitLanguage` setting still governs localization for these fragments.
 
 ## Settings (examples)
 ```json

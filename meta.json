@@ -1,7 +1,7 @@
 {
   "name": "kars - Commit AI",
   "id": "kars.kars-commit-ai",
-  "version": "0.3.24",
-  "builtAt": "2025-10-09T15:08:57.024Z",
+  "version": "0.3.25",
+  "builtAt": "2025-10-09T15:56:45.287Z",
   "notes": "Source package for v0.2.2. Includes meta.json for VSIX builds."
 }
