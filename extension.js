@@ -61,102 +61,63 @@ function clampNumber(value, fallback, min, max){
   return result;
 }
 
-const SYSTEM_PROMPT = `<role>You are a terse senior engineer writing ultra-concise Conventional Commits.</role>
-
-<principles>
-- Obey every rule exactly.
-- Output JSON only; no prose outside JSON.
-</principles>
-
-<critical_rules>
-- Subject: imperative, ≤ 72 chars, default to British English (override when commit_language specifies otherwise), no period.
-- Scope: top-level module (api, context, config) or empty.
-- Body: either "" or 1-3 lines. Each line must start with "- " and contain ≤ 8 words.
-- Never include sentences such as "This commit" or introductions like "Key changes".
-- Never enumerate every file or config flag; cluster concepts.
-- Never mention git internals, blame context, or metadata markers.
-- Honour any commit_language instruction for subject/body wording while keeping type/scope tokens in English.
-</critical_rules>
-
-<format>
-- Format: {type}({scope}): {subject}
-- Allowed types: feat, fix, perf, refactor, style, docs, test, build, ci, chore, revert
-</format>
-
-<guidance>
-- Focus on user-facing intent or effect.
-- Merge multi-step changes into two concise themes.
-- Leave body "" if nothing meaningful to add.
-</guidance>
-
-<examples>
-✅ GOOD - Config tweak:
-{
-  "type": "feat",
-  "scope": "config",
-  "subject": "allow unlimited prompt logging",
-  "body": "- Enable full prompt logging\n- Helps debugging failures quickly",
-  "breaking_change": "",
-  "issues": [],
-  "rationale": "Exposes entire prompt for troubleshooting"
-}
-
-✅ GOOD - Context expansion:
-{
-  "type": "feat",
-  "scope": "context",
-  "subject": "capture editor and terminal context",
-  "body": "- Include active editor tabs\n- Attach last terminal snippet",
-  "breaking_change": "",
-  "issues": [],
-  "rationale": "Provides richer cues for AI"
-}
-
-✅ GOOD - Broader update, still tight:
-{
-  "type": "feat",
-  "scope": "context",
-  "subject": "surface richer workspace signals",
-  "body": "- Log open tabs for ai context\n- Add recent terminal snippet\n- Snapshot heavy diffs briefly",
-  "breaking_change": "",
-  "issues": [],
-  "rationale": "Three short bullets stay focused"
-}
-
-❌ BAD - Verbose rundown:
-{
-  "type": "feat",
-  "scope": "context",
-  "subject": "enhance context collection",
-  "body": "This commit significantly expands the context provided.\n\nKey additions include:\n- Capturing open editor tabs\n- Including terminal output\n- Adding file snapshots\n- Improving tree rendering",
-  "breaking_change": "",
-  "issues": [],
-  "rationale": "Too verbose and enumerates details"
-}
-</examples>
-
-<hard_rules>
-1. Use ≤ 3 bullet lines; prefer 2 or fewer.
-2. Each bullet ≤ 8 words.
-3. No prose outside bullets.
-4. No duplicate information already obvious from diff.
-5. No fabricated issues or metrics.
-</hard_rules>
-
-<output_format>
-Return JSON with keys:
-{
-  "type": "feat|fix|etc",
-  "scope": "module name",
-  "subject": "≤72 chars",
-  "body": "" or "- point one\n- point two",
-  "breaking_change": "",
-  "issues": [],
-  "rationale": "1 line internal note"
-}
-</output_format>`;
-
 const ALLOWED_TYPES = ['feat','fix','perf','refactor','style','docs','test','build','ci','chore','revert'];
+
+const COMMIT_SCHEMA_OBJECT = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['type','scope','subject','body','breaking_change','issues','rationale'],
+  properties: {
+    type: { type: 'string', enum: ALLOWED_TYPES },
+    scope: { type: 'string', description: 'lowercase scope token or empty string', default: '' },
+    subject: {
+      type: 'string',
+      minLength: 8,
+      maxLength: 72,
+      description: 'Imperative summary listing concrete values such as versions, configuration keys, or renamed services.'
+    },
+    body: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 6,
+      description: 'Each entry is a complete sentence focused on one significant change.',
+      items: {
+        type: 'string',
+        minLength: 12,
+        maxLength: 200,
+        pattern: '.*\.$'
+      }
+    },
+    breaking_change: { type: 'string', description: 'Explanation for BREAKING CHANGE or empty string' },
+    issues: { type: 'array', items: { type: 'string' }, description: 'Issue references such as "Closes #123"' },
+    rationale: { type: 'string', description: 'Internal audit note (not part of commit message)' }
+  }
+};
+
+const COMMIT_RESPONSE_FORMAT = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'commit_message',
+    description: 'Structured Conventional Commit payload for kars-commit-ai',
+    strict: true,
+    schema: COMMIT_SCHEMA_OBJECT
+  }
+};
+
+const SYSTEM_PROMPT = `<role>You are a senior engineer who produces precise Conventional Commit payloads.</role>
+
+<requirements>
+- Follow the commit_message schema exactly and emit JSON only (no code fences).
+- Map commit types precisely: feat for capability or DX gains, fix for bug remediation, chore for maintenance/config housekeeping, perf for measurable performance gains; docs/test/build/ci/style/refactor only when that theme dominates.
+- Scope must be a single lowercase module or folder token (e.g., context, config, infra) or empty.
+- Subject must be imperative, ≤72 characters, combine all primary changes into one sentence, and include literal values (old→new versions, configuration keys, renamed services, numeric limits).
+- Respect any language_instruction: write the subject and body sentences in that locale while keeping the Conventional Commit type/scope tokens in English.
+- Body must be an array of complete sentences; each entry covers exactly one significant change, cites the affected artifact/key/value, and ends with a period.
+- Enumerate every significant change from the supplied context in order of impact.
+- Never invent data or reference git metadata; rely solely on the provided context and diffs, and avoid filler such as "This commit".
+</requirements>
+
+<output_format>Return exactly one commit_message JSON object.</output_format>`;
 
 function normalizeEndpoint(url, allowRewrite){
   try {
@@ -893,7 +854,7 @@ function buildUserPrompt(context){
   }).join('\n\n');
 
   return `<instructions>
-Analyse the following repository context and staged diffs to infer the author's intent and produce a commit message.
+Analyze the repository context and staged diffs. Identify every significant, user-visible change and gather the literal values (versions, configuration keys, renamed resources).
 </instructions>
 
 <context>
@@ -957,8 +918,12 @@ ${testsJson}
 </context>
 
 <task>
-Using all the context provided above, generate a JSON response with the following structure:
-{type, scope, subject, body, breaking_change, issues, rationale}
+Produce one commit_message JSON object that satisfies the schema referenced by the system prompt and COMMIT_RESPONSE_FORMAT.
+- Choose the commit type per the provided rules (feat for DX/capability gains, fix for bug remediation, chore for routine maintenance) unless another allowed type better matches the dominant change.
+- Pick the most representative scope token (single lowercase module/folder name) or "" when ambiguous.
+- Craft the subject in ko_KR, combine all primary changes in one sentence, and embed explicit values (version changes, renamed services, configuration keys and new values).
+- Emit the body as a JSON array of ko_KR sentences, one per significant change, each ending with a period and citing the concrete value or file touched.
+- Cover every significant change surfaced in the context without inventing data or repeating git metadata.
 </task>`;
 }
 
@@ -970,8 +935,21 @@ function buildCommitMessage(parsed){
   if(!subject) throw new Error('Model returned empty subject.');
   const header = scope ? `${type}(${scope}): ${subject}` : `${type}: ${subject}`;
   const lines = [header];
-  const body = (parsed.body || '').trim();
-  if(body) lines.push('', body);
+  const bodyField = parsed.body;
+  let bodyBlock = '';
+  if(Array.isArray(bodyField)){
+    const normalized = bodyField.map(entry=> (entry || '').toString().trim()).filter(Boolean);
+    if(normalized.length){
+      bodyBlock = normalized.map(sentence=> sentence.startsWith('- ') ? sentence : `- ${sentence}`).join('\n');
+    }
+  }else if(typeof bodyField === 'string'){
+    const trimmed = bodyField.trim();
+    if(trimmed){
+      const sentences = trimmed.split(/\r?\n/).map(line=> line.trim()).filter(Boolean);
+      bodyBlock = sentences.map(sentence=> sentence.startsWith('- ') ? sentence : `- ${sentence}`).join('\n');
+    }
+  }
+  if(bodyBlock) lines.push(bodyBlock);
   const footer = [];
   if(parsed.breaking_change){ footer.push(`BREAKING CHANGE: ${parsed.breaking_change}`); }
   if(Array.isArray(parsed.issues)) parsed.issues.filter(Boolean).forEach(issue=> footer.push(issue));
@@ -1098,6 +1076,8 @@ async function generate(){
     const payload = isResponses(cfg.endpoint)
       ? { model: cfg.model, input: toResponses([{role:'system',content:systemPrompt},{role:'user',content:userPrompt}]), temperature: 0.2, max_output_tokens: 800 }
       : { model: cfg.model, messages: [{role:'system',content:systemPrompt},{role:'user',content:userPrompt}], temperature: 0.2 };
+
+    payload.response_format = COMMIT_RESPONSE_FORMAT;
 
     const rawResponse = await httpPost(cfg, payload, { system: systemPrompt, user: userPrompt });
     const text = coerceResponse(rawResponse);
