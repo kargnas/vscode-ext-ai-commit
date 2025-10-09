@@ -111,10 +111,12 @@ const SYSTEM_PROMPT = `<role>You are a senior engineer who produces precise Conv
 - Map commit types precisely: feat for capability or DX gains, fix for bug remediation, chore for maintenance/config housekeeping, perf for measurable performance gains; docs/test/build/ci/style/refactor only when that theme dominates.
 - Scope must be a single lowercase module or folder token (e.g., context, config, infra) or empty.
 - Subject must be imperative, ≤72 characters, combine all primary changes into one sentence, and include literal values (old→new versions, configuration keys, renamed services, numeric limits).
-- Respect any language_instruction: write the subject and body sentences in that locale while keeping the Conventional Commit type/scope tokens in English.
+- Respect any language_instruction rigidly: render the subject, body sentences, and rationale in that locale—even if prior commits or diffs use another language—while keeping the Conventional Commit type/scope tokens in English.
+ - Respect any language_instruction rigidly: render the subject, body sentences, and rationale in that locale—even if prior commits or diffs use another language—while keeping the Conventional Commit type/scope tokens in English. If you cannot comply, output a schema-valid object with subject LANGUAGE_POLICY_VIOLATION and an empty body array.
 - Body must be an array of complete sentences; each entry covers exactly one significant change, cites the affected artifact/key/value, and ends with a period.
 - Enumerate every significant change from the supplied context in order of impact.
-- Never invent data or reference git metadata; rely solely on the provided context and diffs, and avoid filler such as "This commit".
+ - Never invent data or reference git metadata; rely solely on the provided context and diffs, and avoid filler such as "This commit".
+ - After composing the response, double-check that every narrative string satisfies the language_instruction before returning it.
 </requirements>
 
 <output_format>Return exactly one commit_message JSON object.</output_format>`;
@@ -301,7 +303,7 @@ function normaliseLanguagePreference(pref){
 function buildLanguageInstruction(pref){
   const value = normaliseLanguagePreference(pref);
   if(value.toLowerCase() === 'auto') return '';
-  return `<language_instruction>Use ${value} for the commit subject, body bullets, and rationale while keeping the Conventional Commit type/scope tokens in English.</language_instruction>`;
+  return `<language_instruction>All narrative fields (subject, body array sentences, rationale) must be written in ${value}. Ignore the language used in prior commits or diffs. If producing valid ${value} narrative text is impossible, emit LANGUAGE_POLICY_VIOLATION in the subject and use an empty body array. Keep the Conventional Commit type/scope tokens in English.</language_instruction>`;
 }
 
 async function buildProjectTree(repo, cwd, cfg, stagedStatusMap){
@@ -921,9 +923,10 @@ ${testsJson}
 Produce one commit_message JSON object that satisfies the schema referenced by the system prompt and COMMIT_RESPONSE_FORMAT.
 - Choose the commit type per the provided rules (feat for DX/capability gains, fix for bug remediation, chore for routine maintenance) unless another allowed type better matches the dominant change.
 - Pick the most representative scope token (single lowercase module/folder name) or "" when ambiguous.
-- Craft the subject in ko_KR, combine all primary changes in one sentence, and embed explicit values (version changes, renamed services, configuration keys and new values).
-- Emit the body as a JSON array of ko_KR sentences, one per significant change, each ending with a period and citing the concrete value or file touched.
+- Craft the subject in the requested language, combine all primary changes in one sentence, and embed explicit values (version changes, renamed services, configuration keys and new values).
+- Emit the body as a JSON array of sentences in the requested language, one per significant change, each ending with a period and citing the concrete value or file touched.
 - Cover every significant change surfaced in the context without inventing data or repeating git metadata.
+- Ignore the languages used in previous commits or diffs; the subject, body, and rationale must obey the requested language_instruction exactly. If compliance is impossible, emit LANGUAGE_POLICY_VIOLATION per the language_instruction guidance.
 </task>`;
 }
 

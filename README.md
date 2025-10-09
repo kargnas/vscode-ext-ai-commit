@@ -15,14 +15,14 @@ VS Code extension to generate Git commit messages via OpenRouter.
 - Local fallback if AI response is empty
 
 ## Build
-- Install: 'code --install-extension <this_folder>.vsix' after packing.
-- Pack: zip this folder as VSIX layout (put under 'extension/' folder) or use 'vsce package'.
-- Remember to include 'meta.json' when creating a .vsix per team convention.
-- Dev shortcut: 'npm run package:install' → vsce package + local install.
+- Install: `code --install-extension output/<generated>.vsix` after packing.
+- Pack: zip this folder as VSIX layout (put under `extension/` folder) or run `vsce package --out output/<name>.vsix`.
+- Remember to include `meta.json` when creating a `.vsix` per team convention.
+- Dev shortcut: `npm run package:install` → bumps version, writes `output/*.vsix`, then installs it locally.
 
 ## Dev convenience commands
-- `npm run package:install`: packages via vsce then force-installs the generated VSIX into your local VS Code.
-- `npx vsce package --no-yarn`: quick manual package step if you just want the VSIX artifact.
+- `npm run package:install`: packages via vsce into `output/` then force-installs the generated VSIX into your local VS Code.
+- `npx vsce package --no-yarn --out output/<name>.vsix`: quick manual package step if you just want the VSIX artifact.
 - `code --install-extension <vsix-path> --force`: install a built VSIX (useful if you copied it elsewhere).
 - `code --uninstall-extension kars.kars-commit-ai`: remove the installed copy before reinstalling from marketplace or another build.
 

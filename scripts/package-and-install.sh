@@ -28,11 +28,14 @@ try {
 NODE
 fi
 
-echo "[package] bundling VSIX via vsce" >&2
-npx vsce package --no-yarn
-
 VSIX_NAME="$(node -p "const pkg=require('./package.json'); pkg.name + '-' + pkg.version + '.vsix'")"
-VSIX_PATH="$ROOT_DIR/$VSIX_NAME"
+OUTPUT_DIR="$ROOT_DIR/output"
+mkdir -p "$OUTPUT_DIR"
+VSIX_PATH="$OUTPUT_DIR/$VSIX_NAME"
+
+echo "[package] bundling VSIX via vsce -> $VSIX_PATH" >&2
+rm -f "$VSIX_PATH"
+npx vsce package --no-yarn --out "$VSIX_PATH"
 
 if [ ! -f "$VSIX_PATH" ]; then
   echo "VSIX not found at $VSIX_PATH" >&2
