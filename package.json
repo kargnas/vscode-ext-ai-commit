@@ -2,7 +2,7 @@
   "name": "kars-commit-ai",
   "displayName": "kars - Commit AI",
   "description": "Generate smart commit messages from staged diffs via OpenRouter. One button next to the star. Logs every request.",
-  "version": "0.3.25",
+  "version": "0.3.26",
   "publisher": "kars",
   "engines": {
     "vscode": "^1.84.0"

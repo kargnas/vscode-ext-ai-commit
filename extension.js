@@ -933,8 +933,11 @@ function buildCommitMessage(parsed){
   const type = (parsed.type || '').trim();
   if(!ALLOWED_TYPES.includes(type)) throw new Error('Model returned unsupported type.');
   const scope = (parsed.scope || '').trim();
-  const subject = (parsed.subject || '').trim();
-  if(!subject) throw new Error('Model returned empty subject.');
+  const rawSubject = (parsed.subject || '').trim();
+  if(!rawSubject) throw new Error('Model returned empty subject.');
+  const prefixRegex = new RegExp(`^(${ALLOWED_TYPES.join('|')})(?:\\([^)]+\\))?:\\s*`, 'i');
+  let subject = rawSubject.replace(prefixRegex, '').trim();
+  if(!subject) subject = rawSubject;
   const header = scope ? `${type}(${scope}): ${subject}` : `${type}: ${subject}`;
   const lines = [header];
   const bodyField = parsed.body;
