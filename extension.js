@@ -175,6 +175,74 @@ async function getGitAPI(){
   return ext.exports.getAPI(1);
 }
 
+function looksLikeRepository(candidate){
+  return !!candidate && typeof candidate === 'object' && candidate.rootUri instanceof vscode.Uri && candidate.state;
+}
+
+function resolveRepositoryFromArg(api, arg){
+  if(!arg) return null;
+  if(Array.isArray(arg)){
+    for(const item of arg){
+      const repo = resolveRepositoryFromArg(api, item);
+      if(repo) return repo;
+    }
+    return null;
+  }
+  if(looksLikeRepository(arg)) return arg;
+  const direct = arg.repository || arg.repo || arg.sourceControl || arg.scm;
+  if(direct){
+    const repo = resolveRepositoryFromArg(api, direct);
+    if(repo) return repo;
+  }
+  if(arg.resourceGroup){
+    const repo = resolveRepositoryFromArg(api, arg.resourceGroup);
+    if(repo) return repo;
+  }
+  if(arg.resourceStates){
+    const repo = resolveRepositoryFromArg(api, arg.resourceStates);
+    if(repo) return repo;
+  }
+  if(arg.resourceGroups){
+    const repo = resolveRepositoryFromArg(api, arg.resourceGroups);
+    if(repo) return repo;
+  }
+  const uri = arg.resourceUri || arg.originalUri || arg.uri;
+  if(uri instanceof vscode.Uri){
+    const repo = api.getRepository(uri);
+    if(repo) return repo;
+  }
+  return null;
+}
+
+async function resolveRepository(api, commandArgs){
+  const repoFromArgs = resolveRepositoryFromArg(api, commandArgs);
+  if(repoFromArgs) return repoFromArgs;
+
+  const selected = api.repositories.find(r=> r.ui && r.ui.selected);
+  if(selected) return selected;
+
+  const activeUri = vscode.window.activeTextEditor?.document?.uri;
+  if(activeUri){
+    const repo = api.getRepository(activeUri);
+    if(repo) return repo;
+  }
+
+  if(api.repositories.length === 1) return api.repositories[0];
+  if(api.repositories.length === 0) return null;
+
+  const picks = api.repositories.map(repo=>{
+    const fsPath = repo.rootUri?.fsPath || '';
+    const label = fsPath ? path.basename(fsPath) || fsPath : '(unknown)';
+    return { label, description: fsPath, repo };
+  });
+
+  const choice = await vscode.window.showQuickPick(picks, {
+    title: 'Commit AI: Select Git repository',
+    placeHolder: 'Choose the Git repository to use'
+  });
+  return choice?.repo || null;
+}
+
 function exec(cmd, cwd){
   return new Promise((resolve, reject)=>{
     cp.exec(cmd, { cwd, maxBuffer: 32*1024*1024 }, (err, stdout, stderr)=>{
@@ -200,6 +268,7 @@ async function ensureStagedOrOfferStageAll(repo){
   if(pick !== 'Stage all') return false;
   await vscode.commands.executeCommand('git.stageAll');
   await new Promise(r=>setTimeout(r, 200));
+  try { await repo.status(); } catch {}
   return (repo.state.indexChanges?.length || 0) > 0;
 }
 
@@ -1061,10 +1130,10 @@ async function httpPost(cfg, payload, prompts){
   return await viaFetch();
 }
 
-async function generate(){
+async function generate(...commandArgs){
   try{
     const api = await getGitAPI();
-    const repo = api.repositories[0];
+    const repo = await resolveRepository(api, commandArgs);
     if(!repo) return vscode.window.showErrorMessage('No Git repository open');
     const stagedOk = await ensureStagedOrOfferStageAll(repo);
     if(!stagedOk) { log('Aborted: no staged changes.'); return; }

@@ -10,6 +10,7 @@ VS Code extension to generate Git commit messages via OpenRouter.
 - Lists up to 10 prior commit titles per touched file (configurable)
 - Captures open editor tabs, recent integrated terminal output, and large file snapshots when a file has 3+ staged hunks
 - Stage-all confirm when no staged changes
+- Multi-repo workspaces supported; the command sticks to the repo you trigger it from and prompts if ambiguous
 - OpenRouter chat/completions by default, Responses Alpha compatible
 - Output channel logs + 'Show Last Payload' for debugging
 - Local fallback if AI response is empty
