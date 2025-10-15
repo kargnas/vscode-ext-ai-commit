@@ -33,7 +33,7 @@ The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL 
 ### Single Type Changes
 
 ```
-<emoji> <type>(<scope>): <description>
+<type>(<scope>): <description>
 <BLANK LINE>
 [optional <body>]
 <BLANK LINE>
@@ -43,19 +43,19 @@ The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL 
 ### Multiple Type Changes
 
 ```
-<emoji> <type>(<scope>): <description>
+<type>(<scope>): <description>
 <BLANK LINE>
 [optional <body> of type 1]
 <BLANK LINE>
 [optional <footer(s)> of type 1]
 <BLANK LINE>
 <BLANK LINE>
-<emoji> <type>(<scope>): <description>
+<type>(<scope>): <description>
 <BLANK LINE>
 [optional <body> of type 2]
 <BLANK LINE>
 [optional <footer(s)> of type 2]
-<emoji> <type>(<scope>): <description>
+<type>(<scope>): <description>
 <BLANK LINE>
 [optional <body> of type 3]
 <BLANK LINE>
@@ -78,6 +78,8 @@ The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL 
 | style    | Styles                   | 💄    | Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc) | formatting                                                    |
 | test     | Tests                    | ✅    | Adding missing tests or correcting existing tests                                                      | unit, e2e                                                     |
 | i18n     |                          | 🌐    | Internationalization                                                                                   | locale, translation                                           |
+
+> 참고: 위 표의 Emoji 열은 분류 가이드일 뿐이며, 커밋 subject에는 이모지를 붙이지 않는다.
 
 ## More information about types
 
@@ -133,14 +135,13 @@ This type is used for commits that involve changes related to internationalizati
 
 ### Subject Line
 
-Format: `<emoji> <type>[optional (<scope>)]: <description>`
+Format: `<type>[optional (<scope>)]: <description>`
 
-- Scope must be in English
-- Imperative mood
-- No capitalization
+- Scope must remain in English
+- Description must follow the repository `commitLanguage` setting (default English); 예: `ko_KR`면 자연스러운 한국어 서술형 한 문장 사용
+- Combine multiple 핵심 변경을 하나의 문장으로 연결하고, 값·키·모델 명시 시 `'literal'` 형식으로 감싸기
 - No period at the end
-- Maximum of 100 characters per line including any spaces or special characters
-- Must be in English
+- Maximum of 100 characters per line including spaces or special characters
 
 ### Body
 

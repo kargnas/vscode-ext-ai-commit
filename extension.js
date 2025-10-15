@@ -10,6 +10,8 @@ let lastContext = null;
 let terminalBuffer = [];
 let terminalRemainder = '';
 let terminalBufferHardLimit = 800;
+let prProviderWarnedNoKey = false;
+let prProviderRegistered = false;
 
 function log(...args){ (out||=vscode.window.createOutputChannel('Kars Commit AI')).appendLine(args.join(' ')); }
 function show(){ (out||=vscode.window.createOutputChannel('Kars Commit AI')).show(true); }
@@ -119,6 +121,39 @@ const SYSTEM_PROMPT = `<role>You are a senior engineer who produces precise Conv
 </requirements>
 
 <output_format>Return exactly one commit_message JSON object.</output_format>`;
+
+const PR_SYSTEM_PROMPT = `<role>You compose reviewer-friendly GitHub pull request titles and descriptions.</role>
+
+<requirements>
+- Follow the pull_request schema exactly and emit JSON only (no code fences).
+- Title must be ≤ 90 characters, imperative, and highlight the most tangible change (identifiers, config keys, versions, endpoints) without emojis.
+- Body must be GitHub-flavoured Markdown containing, in order, the sections: "## Summary" (bullet list of key changes), "## Testing" (bullet list; write "- not run" if no signals), and "## Risks" (bullet list; default to "- low" if nothing notable). Append a "## Linked Issues" section only when issue references are provided; list each as "- <reference>: <short insight>".
+- In the "## Summary" section, each bullet must answer both what changed and why it was done (e.g., "- raise cache TTL to 5m — avoids stale match stats"). When intent is unclear, acknowledge the gap explicitly.
+- Call out implementation rationale, design intent, and notable trade-offs where relevant; prefer concrete reasoning over generic phrasing.
+- Surface breaking or high-risk changes explicitly in Summary and Risks.
+- Use only supplied commits, diffs, and issue context—never speculate about unstated work.
+- When diffs show user-visible copy or API changes, quote the new literal values directly.
+</requirements>
+
+<output_format>Return exactly one pull_request JSON object.</output_format>`;
+
+const PR_RESPONSE_FORMAT = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'pull_request',
+    description: 'Structured pull request title and body for kars-commit-ai',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['title', 'body'],
+      properties: {
+        title: { type: 'string', minLength: 8, maxLength: 120 },
+        body: { type: 'string', minLength: 20, maxLength: 6000 }
+      }
+    }
+  }
+};
 
 function normalizeEndpoint(url, allowRewrite){
   try {
@@ -374,6 +409,12 @@ function buildLanguageInstruction(pref){
   return `<language_instruction>All narrative fields (subject, body fragments, rationale) must be written in ${value}. Ignore the language used in prior commits or diffs. If producing valid ${value} narrative text is impossible, emit LANGUAGE_POLICY_VIOLATION in the subject and use an empty body array. Keep the Conventional Commit type/scope tokens in English.</language_instruction>`;
 }
 
+function buildPullRequestLanguageInstruction(pref){
+  const value = normaliseLanguagePreference(pref);
+  if(value.toLowerCase() === 'auto') return '';
+  return `<language_instruction>Render the pull request title, section headings, and bullet text in ${value}. If you cannot comply fully, return title LANGUAGE_POLICY_VIOLATION and an empty body.</language_instruction>`;
+}
+
 async function buildProjectTree(repo, cwd, cfg, stagedStatusMap){
   const trackedRes = await execFile('git', ['ls-files'], cwd).catch(()=>({ stdout:'' }));
   const untrackedRes = await execFile('git', ['ls-files','--others','--exclude-standard'], cwd).catch(()=>({ stdout:'' }));
@@ -418,7 +459,11 @@ async function buildProjectTree(repo, cwd, cfg, stagedStatusMap){
   addChanges(repo.state.indexChanges, 'staged');
   addChanges(repo.state.workingTreeChanges, 'unstaged');
   addChanges(repo.state.mergeChanges, 'merge');
-  untracked.forEach(rel=>{ ensure(rel).untracked = true; ensure(rel).codes.add('A'); });
+  untracked.forEach(rel=>{
+    if(!rel) return;
+    ensure(rel).untracked = true;
+    ensure(rel).codes.add('A');
+  });
 
   const explicitStatusMap = stagedStatusMap || new Map();
   explicitStatusMap.forEach((code, rel)=>{
@@ -687,6 +732,140 @@ function summariseFile(pathname, diffText){
   else if(intent_guess === 'style') high_level = 'formatting adjustments';
   const risk = intent_guess === 'bugfix' ? 'medium' : 'unknown';
   return { path: pathname, change_kind, symbols_changed, high_level, intent_guess, risk };
+}
+
+function displayPathFromUri(uriString){
+  if(!uriString) return '';
+  try {
+    const parsed = vscode.Uri.parse(uriString);
+    const rel = vscode.workspace.asRelativePath(parsed, false);
+    return rel || parsed.fsPath || parsed.path || uriString;
+  } catch {
+    return String(uriString);
+  }
+}
+
+function inferPathFromPatch(patchText){
+  if(!patchText) return '';
+  const diffLine = patchText.match(/^diff --git a\/([^\s]+) b\/([^\s]+)/m);
+  if(diffLine) return diffLine[2].trim();
+  const plusLine = patchText.match(/^\+\+\+\s+b\/(.*)$/m);
+  if(plusLine) return plusLine[1].trim();
+  return '';
+}
+
+function normalizePullRequestPatches(patches, limit){
+  const enforceLimit = Number.isFinite(limit) && limit > 0;
+  let remaining = enforceLimit ? Number(limit) : 0;
+  let truncated = false;
+  const seenSummaries = new Set();
+  const summaries = [];
+  const sections = [];
+
+  const iterable = Array.isArray(patches) ? patches : [];
+  for(const entry of iterable){
+    if(!entry) continue;
+    let patchText = '';
+    let displayPath = '';
+    if(typeof entry === 'string'){
+      patchText = entry;
+    } else if(typeof entry === 'object'){
+      patchText = String(entry.patch || '');
+      displayPath = displayPathFromUri(entry.fileUri) || displayPathFromUri(entry.previousFileUri) || '';
+    }
+    if(!patchText) continue;
+    const trimmed = patchText.trim();
+    if(!trimmed) continue;
+    if(!displayPath) displayPath = inferPathFromPatch(trimmed);
+    if(displayPath && !seenSummaries.has(displayPath)){
+      seenSummaries.add(displayPath);
+      try {
+        summaries.push(summariseFile(displayPath, trimmed));
+      } catch {
+        // ignore summarise failures
+      }
+    }
+    let chunk = trimmed;
+    if(enforceLimit){
+      if(remaining <= 0){
+        truncated = true;
+        break;
+      }
+      if(chunk.length > remaining){
+        chunk = chunk.slice(0, remaining);
+        truncated = true;
+      }
+      remaining -= chunk.length;
+    }
+    const block = displayPath ? `# ${displayPath}\n${chunk}` : chunk;
+    sections.push(block.trim());
+    if(enforceLimit && remaining <= 0){
+      truncated = true;
+      break;
+    }
+  }
+
+  return {
+    diffText: sections.join('\n\n'),
+    fileSummaries: summaries.slice(0, 25),
+    truncated
+  };
+}
+
+function normaliseIssueContext(issues){
+  if(!Array.isArray(issues)) return [];
+  return issues
+    .map(issue => ({
+      reference: String(issue?.reference || '').trim(),
+      summary: String(issue?.content || '').trim().slice(0, 300)
+    }))
+    .filter(item => item.reference);
+}
+
+function normaliseCommitMessages(messages){
+  if(!Array.isArray(messages)) return [];
+  return messages.map(msg => String(msg || '').trim()).filter(Boolean).slice(0, 20);
+}
+
+function preparePullRequestPromptData(prContext, cfg){
+  const commits = normaliseCommitMessages(prContext?.commitMessages);
+  const issues = normaliseIssueContext(prContext?.issues).slice(0, 10);
+  const patchInfo = normalizePullRequestPatches(prContext?.patches, cfg?.maxPatchBytes || 50000);
+  return { commits, issues, patchInfo };
+}
+
+function buildPullRequestUserPrompt(prData){
+  const commitsSection = prData.commits.length
+    ? prData.commits.map((msg, idx) => `${idx + 1}. ${msg}`).join('\n')
+    : 'none';
+  const issuesSection = prData.issues.length
+    ? prData.issues.map(issue => `- ${issue.reference}: ${issue.summary || 'no additional context'}`).join('\n')
+    : 'none';
+  const fileSummariesJson = prData.patchInfo.fileSummaries.length
+    ? JSON.stringify(prData.patchInfo.fileSummaries, null, 2)
+    : '[]';
+  const diffSection = prData.patchInfo.diffText || '(no diff provided)';
+  const truncatedNote = prData.patchInfo.truncated ? '\n[diff truncated due to size limit]' : '';
+
+  return `<pull_request_context>
+<commit_messages>
+${commitsSection}
+</commit_messages>
+<issues>
+${issuesSection}
+</issues>
+<file_summaries_json>
+${fileSummariesJson}
+</file_summaries_json>
+<diff_snippets>
+${diffSection}${truncatedNote}
+</diff_snippets>
+</pull_request_context>
+
+<task>
+Craft a pull request title and body that satisfy all system requirements.
+Address missing information explicitly instead of inventing it, and keep the body concise but complete.
+</task>`;
 }
 
 function collectOpenTabs(cwd, limit){
@@ -1062,7 +1241,7 @@ function isResponsesObject(obj){
   try { return !!obj && Array.isArray(obj.output); } catch { return false; }
 }
 
-async function httpPost(cfg, payload, prompts){
+async function httpPost(cfg, payload, prompts, cancellationToken){
   lastPayload = payload;
   lastPayload.__meta = { prompts };
   show();
@@ -1096,7 +1275,16 @@ async function httpPost(cfg, payload, prompts){
 
   async function viaFetch(){
     const controller = new AbortController();
-    const t = setTimeout(()=>controller.abort(), cfg.timeoutMs);
+    const timeout = setTimeout(()=>controller.abort(), cfg.timeoutMs);
+    let cancelSub;
+    if(cancellationToken){
+      if(cancellationToken.isCancellationRequested){
+        clearTimeout(timeout);
+        controller.abort();
+        throw new Error('Request cancelled');
+      }
+      cancelSub = cancellationToken.onCancellationRequested(()=>controller.abort());
+    }
     try {
       const res = await fetch(cfg.endpoint, { method:'POST', headers, body: JSON.stringify(payload), signal: controller.signal });
       const text = await res.text();
@@ -1105,7 +1293,15 @@ async function httpPost(cfg, payload, prompts){
       const ct = res.headers.get('content-type') || '';
       if(!ct.includes('json')) return text;
       try { return JSON.parse(text); } catch { return text; }
-    } finally { clearTimeout(t); }
+    } catch(err){
+      if(err?.name === 'AbortError' || err?.message === 'The user aborted a request.'){
+        throw new Error('Request cancelled');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+      cancelSub?.dispose?.();
+    }
   }
 
   async function viaCurl(){
@@ -1121,6 +1317,9 @@ async function httpPost(cfg, payload, prompts){
       '-d', '@'+tmp,
       cfg.endpoint
     ].join(' ');
+    if(cancellationToken?.isCancellationRequested){
+      throw new Error('Request cancelled');
+    }
     const { stdout } = await exec(cmd, process.cwd());
     if(cfg.logRaw) logSection('response', String(stdout).slice(0,1000));
     try { return JSON.parse(stdout); } catch { return stdout; }
@@ -1128,6 +1327,99 @@ async function httpPost(cfg, payload, prompts){
 
   if (cfg.transport === 'curl') return await viaCurl();
   return await viaFetch();
+}
+
+async function providePullRequestTitleAndDescription(prContext, cancellationToken){
+  const cfg = getConfig();
+  if(!cfg.apiKey){
+    if(!prProviderWarnedNoKey){
+      prProviderWarnedNoKey = true;
+      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 karsCommitAI.apiKey 를 먼저 설정해.');
+    }
+    return undefined;
+  }
+
+  try{
+    const languageInstruction = buildPullRequestLanguageInstruction(cfg.commitLanguage);
+    const systemPrompt = languageInstruction ? `${PR_SYSTEM_PROMPT}\n${languageInstruction}` : PR_SYSTEM_PROMPT;
+    const prepared = preparePullRequestPromptData(prContext || {}, cfg);
+    const userPrompt = buildPullRequestUserPrompt(prepared);
+
+    const messages = [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }];
+    const payload = isResponses(cfg.endpoint)
+      ? { model: cfg.model, input: toResponses(messages), temperature: 0.2, max_output_tokens: 1200 }
+      : { model: cfg.model, messages, temperature: 0.2, max_tokens: 1200 };
+
+    payload.response_format = PR_RESPONSE_FORMAT;
+
+    const rawResponse = await httpPost(cfg, payload, { system: systemPrompt, user: userPrompt }, cancellationToken);
+    if(cancellationToken?.isCancellationRequested) return undefined;
+
+    const text = coerceResponse(rawResponse);
+    logSection('pr-model-output', text);
+    const parsed = parseJSONSafely(text);
+    if(!parsed) throw new Error('Model response was not valid JSON.');
+
+    const title = String(parsed.title || parsed.subject || '').trim();
+    const bodyField = parsed.body || parsed.description || '';
+    const description = typeof bodyField === 'string' ? bodyField.trim() : '';
+    if(!title) throw new Error('Model response did not include a title.');
+    const sanitizedBody = description || '## Summary\n- not provided\n\n## Testing\n- not run\n\n## Risks\n- low';
+    return { title, description: sanitizedBody };
+  }catch(err){
+    if(err?.message === 'Request cancelled'){
+      log('PR AI request cancelled');
+      return undefined;
+    }
+    const message = err?.message || String(err);
+    log('PR AI failed: ' + message);
+    vscode.window.showErrorMessage(`PR AI 실패: ${message}`);
+    return undefined;
+  }
+}
+
+function registerPullRequestProvider(context){
+  if(prProviderRegistered) return;
+  const ghExtension = vscode.extensions.getExtension('GitHub.vscode-pull-request-github');
+  if(!ghExtension){
+    log('GitHub Pull Requests extension not detected; skipping PR AI integration.');
+    return;
+  }
+
+  Promise.resolve(ghExtension.activate()).then(api => {
+    if(!api?.registerTitleAndDescriptionProvider){
+      log('GitHub Pull Requests API missing registerTitleAndDescriptionProvider; unable to attach PR AI.');
+      return;
+    }
+    const providerTitle = 'Commit AI (Copilot override)';
+    const disposable = api.registerTitleAndDescriptionProvider(providerTitle, {
+      provideTitleAndDescription: (ctx, token) => providePullRequestTitleAndDescription(ctx, token)
+    });
+    context.subscriptions.push(disposable);
+    try {
+      const currentSet = api._titleAndDescriptionProviders;
+      if(currentSet instanceof Set){
+        const reordered = [];
+        let ours = null;
+        for(const entry of currentSet){
+          if(!ours && entry?.title === providerTitle){
+            ours = entry;
+            continue;
+          }
+          reordered.push(entry);
+        }
+        if(ours){
+          api._titleAndDescriptionProviders = new Set([ours, ...reordered]);
+        }
+      }
+    }catch(err){
+      log('Commit AI: unable to reorder PR providers: ' + (err?.message || err));
+    }
+    prProviderRegistered = true;
+    log('Commit AI: registered pull request title/description provider.');
+  }).catch(err => {
+    log('Commit AI: failed to register PR provider: ' + (err?.message || err));
+  });
 }
 
 async function generate(...commandArgs){
@@ -1153,7 +1445,7 @@ async function generate(...commandArgs){
 
     payload.response_format = COMMIT_RESPONSE_FORMAT;
 
-    const rawResponse = await httpPost(cfg, payload, { system: systemPrompt, user: userPrompt });
+    const rawResponse = await httpPost(cfg, payload, { system: systemPrompt, user: userPrompt }, undefined);
     const text = coerceResponse(rawResponse);
     logSection('model-output', text);
     const parsed = parseJSONSafely(text);
@@ -1196,6 +1488,7 @@ function activate(context){
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.showLastPayload', showLast));
+  registerPullRequestProvider(context);
 }
 
 function deactivate(){}
