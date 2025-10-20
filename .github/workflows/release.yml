@@ -99,7 +99,14 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Package VSIX
-        run: npx @vscode/vsce package --out ./dist
+        run: |
+          set -eo pipefail
+          npx --yes @vscode/vsce package
+          mkdir -p dist
+          shopt -s nullglob
+          for file in *.vsix; do
+            mv "$file" dist/
+          done
 
       - name: Push commit and tag
         run: |
