@@ -45,9 +45,11 @@ fi
 echo "[cleanup] removing old extension versions" >&2
 EXT_DIR="$HOME/.vscode/extensions"
 if [ -d "$EXT_DIR" ]; then
-  find "$EXT_DIR" -maxdepth 1 -type d -name "kars.kars-commit-ai-*" | while read -r dir; do
-    rm -rf "$dir"
-    echo "  removed $(basename "$dir")" >&2
+  for pattern in "kargnas.kargnas-commit-ai-*" "kars.kars-commit-ai-*"; do
+    find "$EXT_DIR" -maxdepth 1 -type d -name "$pattern" | while read -r dir; do
+      rm -rf "$dir"
+      echo "  removed $(basename "$dir")" >&2
+    done
   done
 fi
 

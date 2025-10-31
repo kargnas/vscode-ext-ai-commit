@@ -12,9 +12,12 @@ let terminalRemainder = '';
 let terminalBufferHardLimit = 800;
 let prProviderWarnedNoKey = false;
 let prProviderRegistered = false;
+const OUTPUT_CHANNEL_NAME = 'Kargnas Commit AI';
+const SETTINGS_PREFIX = 'kargnasCommitAI';
+const LEGACY_SETTINGS_PREFIX = 'karsCommitAI';
 
-function log(...args){ (out||=vscode.window.createOutputChannel('Kars Commit AI')).appendLine(args.join(' ')); }
-function show(){ (out||=vscode.window.createOutputChannel('Kars Commit AI')).show(true); }
+function log(...args){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).appendLine(args.join(' ')); }
+function show(){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).show(true); }
 function logSection(title, body){ log(`[${title}]`); (body||'').split(/\r?\n/).forEach(line=>log(line)); }
 
 function stripAnsi(text){
@@ -63,6 +66,12 @@ function clampNumber(value, fallback, min, max){
   return result;
 }
 
+function readSetting(config, suffix){
+  const preferred = config.get(`${SETTINGS_PREFIX}.${suffix}`);
+  if(preferred !== undefined) return preferred;
+  return config.get(`${LEGACY_SETTINGS_PREFIX}.${suffix}`);
+}
+
 const ALLOWED_TYPES = ['feat','fix','perf','refactor','style','docs','test','build','ci','chore','revert'];
 
 const COMMIT_SCHEMA_OBJECT = {
@@ -99,7 +108,7 @@ const COMMIT_RESPONSE_FORMAT = {
   type: 'json_schema',
   json_schema: {
     name: 'commit_message',
-    description: 'Structured Conventional Commit payload for kars-commit-ai',
+    description: 'Structured Conventional Commit payload for kargnas-commit-ai',
     strict: true,
     schema: COMMIT_SCHEMA_OBJECT
   }
@@ -126,9 +135,9 @@ const PR_SYSTEM_PROMPT = `<role>You compose reviewer-friendly GitHub pull reques
 
 <requirements>
 - Follow the pull_request schema exactly and emit JSON only (no code fences).
-- Title must be ≤ 90 characters, imperative, and highlight the most tangible change (identifiers, config keys, versions, endpoints) without emojis.
-- Body must be GitHub-flavoured Markdown containing, in order, the sections: "## Summary" (bullet list of key changes), "## Testing" (bullet list; write "- not run" if no signals), and "## Risks" (bullet list; default to "- low" if nothing notable). Append a "## Linked Issues" section only when issue references are provided; list each as "- <reference>: <short insight>".
-- In the "## Summary" section, each bullet must answer both what changed and why it was done (e.g., "- raise cache TTL to 5m — avoids stale match stats"). When intent is unclear, acknowledge the gap explicitly.
+- Title must be ≤ 90 characters, imperative, and highlight the most tangible change for the end users / little bit more focused on frontend. (identifiers, config keys, versions, endpoints) without emojis.
+- Body must be GitHub-flavoured Markdown containing, in order, the sections: "## Summary" (concise explanation of this PR), "## Features" (bullet list; write "- not run" if no signals), and "## Risks" (bullet list; default to "- low" if nothing notable). Append a "## Linked Issues" section only when issue references are provided; list each as "- <reference>: <short insight>".
+- In the "## Features" section, each bullet must answer both what changed and why it was done (e.g., "- raise cache TTL to 5m — avoids stale match stats"). When intent is unclear, acknowledge the gap explicitly. Focus on the features that impact to the end users.
 - Call out implementation rationale, design intent, and notable trade-offs where relevant; prefer concrete reasoning over generic phrasing.
 - Surface breaking or high-risk changes explicitly in Summary and Risks.
 - Use only supplied commits, diffs, and issue context—never speculate about unstated work.
@@ -141,7 +150,7 @@ const PR_RESPONSE_FORMAT = {
   type: 'json_schema',
   json_schema: {
     name: 'pull_request',
-    description: 'Structured pull request title and body for kars-commit-ai',
+    description: 'Structured pull request title and body for kargnas-commit-ai',
     strict: true,
     schema: {
       type: 'object',
@@ -173,32 +182,32 @@ function normalizeModel(model){
 
 function getConfig(){
   const c = vscode.workspace.getConfiguration();
-  const commitLanguageRaw = c.get('karsCommitAI.commitLanguage');
+  const commitLanguageRaw = readSetting(c, 'commitLanguage');
   const commitLanguage = commitLanguageRaw === undefined ? '' : String(commitLanguageRaw || '').trim();
-  const endpointRaw = c.get('karsCommitAI.endpoint') || 'https://openrouter.ai/api/v1/chat/completions';
-  const endpoint = normalizeEndpoint(endpointRaw, !!c.get('karsCommitAI.endpointRewrite'));
+  const endpointRaw = readSetting(c, 'endpoint') || 'https://openrouter.ai/api/v1/chat/completions';
+  const endpoint = normalizeEndpoint(endpointRaw, !!readSetting(c, 'endpointRewrite'));
   const compat = c.get('dish-ai-commit.features.branchName.systemPrompt', '');
   return {
-    apiKey: c.get('karsCommitAI.apiKey') || '',
-    model: normalizeModel(c.get('karsCommitAI.model') || 'google/gemini-2.5-flash-lite'),
+    apiKey: readSetting(c, 'apiKey') || '',
+    model: normalizeModel(readSetting(c, 'model') || 'google/gemini-2.5-flash-lite'),
     endpoint,
-    transport: c.get('karsCommitAI.transport') || 'fetch',
-    timeoutMs: c.get('karsCommitAI.requestTimeoutMs') || 25000,
-    logRaw: !!c.get('karsCommitAI.logRawResponse'),
-    include: c.get('karsCommitAI.contextIncludeGlobs') || ['**/*'],
-    ignore: c.get('karsCommitAI.contextIgnoreGlobs') || ['**/*.lock','dist/**','build/**','out/**','**/*.svg','**/*.png','**/*.jpg'],
-    maxFilePatchBytes: c.get('karsCommitAI.maxFilePatchBytes') || 12000,
-    maxPatchBytes: c.get('karsCommitAI.maxPatchBytes') || 50000,
-    referer: c.get('karsCommitAI.referer') || 'https://kargn.as',
-    title: c.get('karsCommitAI.title') || 'kars - Commit AI',
-    systemPrompt: (compat ? compat + '\n\n' : '') + (c.get('karsCommitAI.systemPrompt') || SYSTEM_PROMPT),
-    previousCommitLimit: clampNumber(c.get('karsCommitAI.previousCommitLimit'), 10, 1, 25),
-    openTabsLimit: clampNumber(c.get('karsCommitAI.openTabsLimit'), 10, 0, 40),
-    terminalLogLines: clampNumber(c.get('karsCommitAI.terminalLogLines'), 20, 0, 200),
-    projectTreeMaxEntries: clampNumber(c.get('karsCommitAI.projectTreeMaxEntries'), 400, 50, 1200),
-    heavyDiffMaxLines: clampNumber(c.get('karsCommitAI.heavyDiffMaxLines'), 500, 50, 1000),
-    heavyDiffMaxFiles: clampNumber(c.get('karsCommitAI.heavyDiffMaxFiles'), 3, 0, 6),
-    logPromptMaxChars: clampNumber(c.get('karsCommitAI.logPromptMaxChars'), 0, 0, 1000000),
+    transport: readSetting(c, 'transport') || 'fetch',
+    timeoutMs: readSetting(c, 'requestTimeoutMs') || 25000,
+    logRaw: !!readSetting(c, 'logRawResponse'),
+    include: readSetting(c, 'contextIncludeGlobs') || ['**/*'],
+    ignore: readSetting(c, 'contextIgnoreGlobs') || ['**/*.lock','dist/**','build/**','out/**','**/*.svg','**/*.png','**/*.jpg'],
+    maxFilePatchBytes: readSetting(c, 'maxFilePatchBytes') || 12000,
+    maxPatchBytes: readSetting(c, 'maxPatchBytes') || 50000,
+    referer: readSetting(c, 'referer') || 'https://kargn.as',
+    title: readSetting(c, 'title') || 'kargnas - Commit AI',
+    systemPrompt: (compat ? compat + '\n\n' : '') + (readSetting(c, 'systemPrompt') || SYSTEM_PROMPT),
+    previousCommitLimit: clampNumber(readSetting(c, 'previousCommitLimit'), 10, 1, 25),
+    openTabsLimit: clampNumber(readSetting(c, 'openTabsLimit'), 10, 0, 40),
+    terminalLogLines: clampNumber(readSetting(c, 'terminalLogLines'), 20, 0, 200),
+    projectTreeMaxEntries: clampNumber(readSetting(c, 'projectTreeMaxEntries'), 400, 50, 1200),
+    heavyDiffMaxLines: clampNumber(readSetting(c, 'heavyDiffMaxLines'), 500, 50, 1000),
+    heavyDiffMaxFiles: clampNumber(readSetting(c, 'heavyDiffMaxFiles'), 3, 0, 6),
+    logPromptMaxChars: clampNumber(readSetting(c, 'logPromptMaxChars'), 0, 0, 1000000),
     commitLanguage
   };
 }
@@ -1305,7 +1314,7 @@ async function httpPost(cfg, payload, prompts, cancellationToken){
   }
 
   async function viaCurl(){
-    const tmp = path.join(os.tmpdir(), `kars-commit-ai-${Date.now()}.json`);
+    const tmp = path.join(os.tmpdir(), `kargnas-commit-ai-${Date.now()}.json`);
     fs.writeFileSync(tmp, JSON.stringify(payload));
     const cmd = [
       'curl','-sS','-L','--max-time', String(Math.ceil(cfg.timeoutMs/1000)),
@@ -1334,7 +1343,7 @@ async function providePullRequestTitleAndDescription(prContext, cancellationToke
   if(!cfg.apiKey){
     if(!prProviderWarnedNoKey){
       prProviderWarnedNoKey = true;
-      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 karsCommitAI.apiKey 를 먼저 설정해.');
+      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 kargnasCommitAI.apiKey 를 먼저 설정해. (예전 karsCommitAI.* 키도 계속 인식해.)');
     }
     return undefined;
   }
@@ -1431,7 +1440,7 @@ async function generate(...commandArgs){
     if(!stagedOk) { log('Aborted: no staged changes.'); return; }
 
     const cfg = getConfig();
-    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set karsCommitAI.apiKey first');
+    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set kargnasCommitAI.apiKey first (legacy karsCommitAI.* is still read)');
 
     const context = await collectContext(repo, cfg);
     const baseSystemPrompt = cfg.systemPrompt || SYSTEM_PROMPT;
@@ -1483,8 +1492,11 @@ function showLast(){
 }
 
 function activate(context){
-  log('Kars Commit AI activated at ' + new Date().toISOString());
+  log('Kargnas Commit AI activated at ' + new Date().toISOString());
   // Terminal capture removed: onDidWriteTerminalData requires proposed API
+  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.generate', generate));
+  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.pingOpenRouter', ping));
+  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.showLastPayload', showLast));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.showLastPayload', showLast));
