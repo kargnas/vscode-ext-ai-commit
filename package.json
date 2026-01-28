@@ -2,7 +2,7 @@
   "name": "kargnas-commit-ai",
   "displayName": "kargnas - Commit AI",
   "description": "Generate smart commit messages from staged diffs via OpenRouter. One button next to the star. Logs every request.",
-  "version": "0.3.37",
+  "version": "0.3.38",
   "publisher": "kargnas",
   "engines": {
     "vscode": "^1.84.0"
