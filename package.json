@@ -2,7 +2,7 @@
   "name": "kargnas-commit-ai",
   "displayName": "kargnas - Commit AI",
   "description": "Generate smart commit messages from staged diffs via OpenRouter. One button next to the star. Logs every request.",
-  "version": "0.3.33",
+  "version": "0.3.36",
   "publisher": "kargnas",
   "engines": {
     "vscode": "^1.84.0"
@@ -30,6 +30,11 @@
       {
         "command": "kargnasCommitAI.showLastPayload",
         "title": "Commit AI: Show Last Payload"
+      },
+      {
+        "command": "kargnasCommitAI.openInGitHub",
+        "title": "Open in GitHub",
+        "icon": "$(github)"
       }
     ],
     "menus": {
@@ -47,6 +52,27 @@
           "group": "kargnas",
           "when": "scmProvider == git",
           "icon": "$(wand)"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "kargnasCommitAI.openInGitHub",
+          "group": "navigation@99",
+          "when": "editorTextFocus && resourceScheme == file"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "kargnasCommitAI.openInGitHub",
+          "group": "navigation",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "kargnasCommitAI.openInGitHub",
+          "group": "navigation@99",
+          "when": "resourceScheme == file"
         }
       ]
     },

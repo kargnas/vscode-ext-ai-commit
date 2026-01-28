@@ -1491,12 +1491,120 @@ function showLast(){
   vscode.workspace.openTextDocument({ content, language: 'json' }).then(doc => vscode.window.showTextDocument(doc, { preview:false }));
 }
 
+/**
+ * Convert git remote URL (SSH or HTTPS) to GitHub web URL
+ * SSH: git@github.com:user/repo.git -> https://github.com/user/repo
+ * HTTPS: https://github.com/user/repo.git -> https://github.com/user/repo
+ */
+function gitRemoteToGitHubUrl(remoteUrl){
+  if(!remoteUrl) return null;
+  const trimmed = remoteUrl.trim();
+  
+  const sshMatch = trimmed.match(/^git@github\.com[:/](.+?)(?:\.git)?$/);
+  if(sshMatch) return `https://github.com/${sshMatch[1]}`;
+  
+  const httpsMatch = trimmed.match(/^https?:\/\/github\.com\/(.+?)(?:\.git)?$/);
+  if(httpsMatch) return `https://github.com/${httpsMatch[1]}`;
+  
+  return null;
+}
+
+async function openInGitHub(uri){
+  try {
+    const api = await getGitAPI();
+    let fileUri = uri;
+    let repo = null;
+    
+    if(!fileUri){
+      const editor = vscode.window.activeTextEditor;
+      if(editor && editor.document.uri.scheme === 'file'){
+        fileUri = editor.document.uri;
+      }
+    }
+    
+    if(fileUri && fileUri.scheme === 'file'){
+      repo = api.getRepository(fileUri);
+    }
+    
+    if(!repo){
+      repo = await resolveRepository(api, null);
+    }
+    
+    if(!repo){
+      vscode.window.showWarningMessage('No Git repository found.');
+      return;
+    }
+    
+    const cwd = repo.rootUri.fsPath;
+    
+    const [remoteUrl, branch] = await Promise.all([
+      runGit(cwd, ['remote', 'get-url', 'origin'], true),
+      runGit(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'], true)
+    ]);
+    
+    const baseUrl = gitRemoteToGitHubUrl(remoteUrl);
+    if(!baseUrl){
+      vscode.window.showWarningMessage('Remote origin is not a GitHub repository.');
+      return;
+    }
+    
+    let githubUrl = baseUrl;
+    
+    if(fileUri && fileUri.scheme === 'file'){
+      const filePath = fileUri.fsPath;
+      const relativePath = path.relative(cwd, filePath).replace(/\\/g, '/');
+      
+      if(relativePath && !relativePath.startsWith('..')){
+        githubUrl = `${baseUrl}/blob/${branch || 'main'}/${relativePath}`;
+        
+        const editor = vscode.window.activeTextEditor;
+        if(editor && editor.document.uri.fsPath === filePath){
+          const selection = editor.selection;
+          if(!selection.isEmpty){
+            const startLine = selection.start.line + 1;
+            const endLine = selection.end.line + 1;
+            githubUrl += startLine === endLine ? `#L${startLine}` : `#L${startLine}-L${endLine}`;
+          } else {
+            const cursorLine = selection.active.line + 1;
+            githubUrl += `#L${cursorLine}`;
+          }
+        }
+      }
+    }
+    
+    const choices = [
+      { label: '$(link-external) Open in Browser', value: 'external' },
+      { label: '$(clippy) Copy URL', value: 'copy' }
+    ];
+    
+    const choice = await vscode.window.showQuickPick(choices, {
+      placeHolder: githubUrl,
+      title: 'Open in GitHub'
+    });
+    
+    if(!choice) return;
+    
+    if(choice.value === 'external'){
+      await vscode.env.openExternal(vscode.Uri.parse(githubUrl));
+    } else if(choice.value === 'copy'){
+      await vscode.env.clipboard.writeText(githubUrl);
+      vscode.window.showInformationMessage('GitHub URL copied to clipboard.');
+    }
+    
+    log(`Open in GitHub: ${githubUrl}`);
+  } catch(e){
+    log('Open in GitHub failed: ' + (e?.message || e));
+    vscode.window.showErrorMessage('Open in GitHub failed: ' + (e?.message || e));
+  }
+}
+
 function activate(context){
   log('Kargnas Commit AI activated at ' + new Date().toISOString());
   // Terminal capture removed: onDidWriteTerminalData requires proposed API
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.showLastPayload', showLast));
+  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.openInGitHub', openInGitHub));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.showLastPayload', showLast));

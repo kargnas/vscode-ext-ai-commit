@@ -1,7 +1,7 @@
 {
   "name": "kargnas - Commit AI",
   "id": "kargnas.kargnas-commit-ai",
-  "version": "0.3.30",
-  "builtAt": "2025-10-15T16:20:36.418Z",
+  "version": "0.3.36",
+  "builtAt": "2026-01-28T14:39:00.622Z",
   "notes": "Source package for v0.2.2. Includes meta.json for VSIX builds."
 }
