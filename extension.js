@@ -1573,22 +1573,32 @@ async function openInGitHub(uri){
     }
     
     const choices = [
-      { label: '$(link-external) Open in Browser', value: 'external' },
-      { label: '$(clippy) Copy URL', value: 'copy' }
+      { label: '$(link-external) Open in Browser', value: 'external', description: githubUrl },
+      { label: '$(clippy) Copy URL', value: 'copy', description: 'Copy to clipboard' },
+      { label: '$(git-pull-request) Pull Requests', value: 'pulls', description: `${baseUrl}/pulls` },
+      { label: '$(issues) Issues', value: 'issues', description: `${baseUrl}/issues` },
+      { label: '$(play) Actions', value: 'actions', description: `${baseUrl}/actions` }
     ];
     
     const choice = await vscode.window.showQuickPick(choices, {
-      placeHolder: githubUrl,
+      placeHolder: 'Select action',
       title: 'Open in GitHub'
     });
     
     if(!choice) return;
     
-    if(choice.value === 'external'){
-      await vscode.env.openExternal(vscode.Uri.parse(githubUrl));
-    } else if(choice.value === 'copy'){
+    const urlMap = {
+      external: githubUrl,
+      pulls: `${baseUrl}/pulls`,
+      issues: `${baseUrl}/issues`,
+      actions: `${baseUrl}/actions`
+    };
+    
+    if(choice.value === 'copy'){
       await vscode.env.clipboard.writeText(githubUrl);
       vscode.window.showInformationMessage('GitHub URL copied to clipboard.');
+    } else if(urlMap[choice.value]){
+      await vscode.env.openExternal(vscode.Uri.parse(urlMap[choice.value]));
     }
     
     log(`Open in GitHub: ${githubUrl}`);
