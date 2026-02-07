@@ -1,9 +1,11 @@
 # LLM Commit Message
 
-[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kargnas.llm-commit-message)](https://marketplace.visualstudio.com/items?itemName=kargnas.llm-commit-message)
-[![Blog](https://img.shields.io/badge/blog-kargn.as-blue)](https://kargn.as)
+[![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/kargnas.llm-commit-message?label=VS%20Marketplace&color=blue)](https://marketplace.visualstudio.com/items?itemName=kargnas.llm-commit-message)
+[![Blog](https://img.shields.io/badge/Blog-kargn.as-green)](https://kargn.as)
 
 Generate high-quality, context-aware git commit messages powered by AI. Works with GPT, Claude, Gemini, and any LLM available through [OpenRouter](https://openrouter.ai).
+
+**English** | [한국어](docs/README.ko.md) | [简体中文](docs/README.zh-CN.md) | [繁體中文-台灣](docs/README.zh-TW.md) | [繁體中文-香港](docs/README.zh-HK.md) | [日本語](docs/README.ja.md)
 
 ## ✨ Features
 
