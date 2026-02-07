@@ -1,7 +1,7 @@
 {
-  "name": "kargnas-commit-ai",
-  "displayName": "kargnas - Commit AI",
-  "description": "Generate smart commit messages from staged diffs via OpenRouter. One button next to the star. Logs every request.",
+  "name": "ai-commit",
+  "displayName": "Commit Message with LLM",
+  "description": "AI-powered git commit messages via OpenRouter: GPT, Claude, Gemini & more. Rich context with diffs, tree, tabs, terminal logs. One-click Conventional Commits.",
   "version": "0.3.38",
   "publisher": "kargnas",
   "engines": {
@@ -10,6 +10,34 @@
   "categories": [
     "SCM",
     "Other"
+  ],
+  "keywords": [
+    "commit",
+    "ai",
+    "llm",
+    "openrouter",
+    "git",
+    "conventional-commits",
+    "message",
+    "gpt",
+    "claude",
+    "gemini"
+  ],
+  "galleryBanner": {
+    "color": "#1BB352",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/visual-studio-marketplace/v/kargnas.ai-commit",
+      "href": "https://marketplace.visualstudio.com/items?itemName=kargnas.ai-commit",
+      "description": "VS Marketplace Version"
+    },
+    {
+      "url": "https://img.shields.io/badge/blog-kargn.as-blue",
+      "href": "https://kargn.as",
+      "description": "Blog"
+    }
   ],
   "icon": "media/icon.png",
   "main": "./extension.js",
@@ -361,12 +389,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/opgginc/kars-commit-ai"
+    "url": "https://github.com/kargnas/vscode-ext-ai-commit.git"
   },
   "bugs": {
-    "url": "https://github.com/opgginc/kars-commit-ai/issues"
+    "url": "https://github.com/kargnas/vscode-ext-ai-commit/issues"
   },
-  "homepage": "https://kargn.as",
+  "homepage": "https://github.com/kargnas/vscode-ext-ai-commit",
   "license": "MIT",
   "devDependencies": {
     "@vscode/vsce": "^3.6.2"

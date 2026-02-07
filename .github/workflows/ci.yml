@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint (if available)
+        run: npm run lint --if-present
+        continue-on-error: true
+
+      - name: Build
+        run: npx @vscode/vsce package --out test.vsix
+
+      - name: Verify VSIX
+        run: |
+          if [ ! -f test.vsix ]; then
+            echo "VSIX package not created"
+            exit 1
+          fi
+          echo "VSIX package created successfully"

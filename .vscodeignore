@@ -1,0 +1,24 @@
+# Development files
+.vscode/**
+.vscode-test/**
+.claude/**
+.git/**
+.github/**
+.gitignore
+
+# Documentation & meta
+AGENTS.md
+CLAUDE.md
+docs/**
+scripts/**
+meta.json
+prompt/**
+
+# Build artifacts
+*.vsix
+node_modules/**
+out/test/**
+
+# Misc
+.DS_Store
+*.log
