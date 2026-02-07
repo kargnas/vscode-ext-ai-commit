@@ -2,7 +2,7 @@
   "name": "llm-commit-message",
   "displayName": "LLM Commit Message",
   "description": "AI-powered git commit messages via OpenRouter: GPT, Claude, Gemini & more. Rich context with diffs, tree, tabs, terminal logs. One-click Conventional Commits.",
-  "version": "0.3.50",
+  "version": "0.3.51",
   "publisher": "kargnas",
   "engines": {
     "vscode": "^1.84.0"
