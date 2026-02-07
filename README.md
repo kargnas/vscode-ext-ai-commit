@@ -1,6 +1,6 @@
-# AI Commit Message
+# LLM Commit Message
 
-[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kargnas.ai-commit-message)](https://marketplace.visualstudio.com/items?itemName=kargnas.ai-commit-message)
+[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kargnas.llm-commit-message)](https://marketplace.visualstudio.com/items?itemName=kargnas.llm-commit-message)
 [![Blog](https://img.shields.io/badge/blog-kargn.as-blue)](https://kargn.as)
 
 Generate high-quality, context-aware git commit messages powered by AI. Works with GPT, Claude, Gemini, and any LLM available through [OpenRouter](https://openrouter.ai).
@@ -60,7 +60,7 @@ Working with multiple git repositories? No problem. The extension:
 
 ## 📦 Installation
 
-1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kargnas.ai-commit-message)
+1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kargnas.llm-commit-message)
 2. Get your API key from [OpenRouter](https://openrouter.ai/keys)
 3. Open VS Code settings (⌘+, or Ctrl+,)
 4. Search for "kargnas commit"
@@ -164,7 +164,7 @@ MIT © [Sangrak Choi](https://kargn.as)
 ## 🔗 Links
 
 - [GitHub Repository](https://github.com/kargnas/vscode-ext-ai-commit)
-- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kargnas.ai-commit-message)
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kargnas.llm-commit-message)
 - [OpenRouter](https://openrouter.ai)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Author's Blog](https://kargn.as)

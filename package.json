@@ -1,6 +1,6 @@
 {
-  "name": "ai-commit-message",
-  "displayName": "AI Commit Message",
+  "name": "llm-commit-message",
+  "displayName": "LLM Commit Message",
   "description": "AI-powered git commit messages via OpenRouter: GPT, Claude, Gemini & more. Rich context with diffs, tree, tabs, terminal logs. One-click Conventional Commits.",
   "version": "0.3.40",
   "publisher": "kargnas",
@@ -29,8 +29,8 @@
   },
   "badges": [
     {
-      "url": "https://img.shields.io/visual-studio-marketplace/v/kargnas.ai-commit-message",
-      "href": "https://marketplace.visualstudio.com/items?itemName=kargnas.ai-commit-message",
+      "url": "https://img.shields.io/visual-studio-marketplace/v/kargnas.llm-commit-message",
+      "href": "https://marketplace.visualstudio.com/items?itemName=kargnas.llm-commit-message",
       "description": "VS Marketplace Version"
     },
     {
