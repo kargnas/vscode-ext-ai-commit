@@ -12,9 +12,9 @@ let terminalRemainder = '';
 let terminalBufferHardLimit = 800;
 let prProviderWarnedNoKey = false;
 let prProviderRegistered = false;
-const OUTPUT_CHANNEL_NAME = 'LLM Commit Message';
-const SETTINGS_PREFIX = 'llmCommitMessage';
-const LEGACY_SETTINGS_PREFIXES = ['kargnasCommitAI', 'karsCommitAI'];
+const OUTPUT_CHANNEL_NAME = 'Kargnas - AI Commit';
+const SETTINGS_PREFIX = 'kargnas.aiCommit';
+const LEGACY_SETTINGS_PREFIXES = ['llmCommitMessage', 'kargnasCommitAI', 'karsCommitAI'];
 
 function log(...args){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).appendLine(args.join(' ')); }
 function show(){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).show(true); }
@@ -1347,7 +1347,7 @@ async function providePullRequestTitleAndDescription(prContext, cancellationToke
   if(!cfg.apiKey){
     if(!prProviderWarnedNoKey){
       prProviderWarnedNoKey = true;
-      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 llmCommitMessage.apiKey 를 먼저 설정해. (예전 kargnasCommitAI.*, karsCommitAI.* 키도 계속 인식해.)');
+      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 kargnas.aiCommit.apiKey 를 먼저 설정해. (예전 llmCommitMessage.*, kargnasCommitAI.*, karsCommitAI.* 키도 계속 인식해.)');
     }
     return undefined;
   }
@@ -1444,7 +1444,7 @@ async function generate(...commandArgs){
     if(!stagedOk) { log('Aborted: no staged changes.'); return; }
 
     const cfg = getConfig();
-    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set llmCommitMessage.apiKey first (legacy kargnasCommitAI.*, karsCommitAI.* are still read)');
+    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set kargnas.aiCommit.apiKey first (legacy llmCommitMessage.*, kargnasCommitAI.*, karsCommitAI.* are still read)');
 
     const context = await collectContext(repo, cfg);
     const baseSystemPrompt = cfg.systemPrompt || SYSTEM_PROMPT;
@@ -1649,26 +1649,30 @@ async function migrateSettings(){
   }
 
   if(migrated){
-    const message = `LLM Commit Message: Settings migrated from old namespace (${migratedKeys.length} settings). You can remove old settings.`;
+    const message = `Kargnas - AI Commit: Settings migrated from old namespace (${migratedKeys.length} settings). You can remove old settings.`;
     vscode.window.showInformationMessage(message);
     log(message);
   }
 }
 
 function activate(context){
-  log('LLM Commit Message activated at ' + new Date().toISOString());
+  log('Kargnas - AI Commit activated at ' + new Date().toISOString());
   
   migrateSettings().catch(err => {
     log('Settings migration failed: ' + (err?.message || err));
   });
   
   // Terminal capture removed: onDidWriteTerminalData requires proposed API
+  context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.generate', generate));
+  context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.pingOpenRouter', ping));
+  context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.showLastPayload', showLast));
+  context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.openInGitHub', openInGitHub));
+  
+  // Legacy command aliases for backward compatibility
   context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.showLastPayload', showLast));
   context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.openInGitHub', openInGitHub));
-  
-  // Legacy command aliases for backward compatibility
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.showLastPayload', showLast));

@@ -1,6 +1,6 @@
 {
-  "name": "llm-commit-message",
-  "displayName": "LLM Commit Message",
+  "name": "kargnas-ai-commit",
+  "displayName": "Kargnas - AI Commit",
   "description": "AI-powered git commit messages via OpenRouter: GPT, Claude, Gemini & more. Rich context with diffs, tree, tabs, terminal logs. One-click Conventional Commits.",
   "version": "0.3.48",
   "publisher": "kargnas",
@@ -47,20 +47,20 @@
   "contributes": {
     "commands": [
       {
-        "command": "llmCommitMessage.generate",
+        "command": "kargnas.aiCommit.generate",
         "title": "AI Commit",
         "icon": "$(sparkle)"
       },
       {
-        "command": "llmCommitMessage.pingOpenRouter",
+        "command": "kargnas.aiCommit.pingOpenRouter",
         "title": "Commit AI: Ping OpenRouter"
       },
       {
-        "command": "llmCommitMessage.showLastPayload",
+        "command": "kargnas.aiCommit.showLastPayload",
         "title": "Commit AI: Show Last Payload"
       },
       {
-        "command": "llmCommitMessage.openInGitHub",
+        "command": "kargnas.aiCommit.openInGitHub",
         "title": "Open in GitHub",
         "icon": "$(github)"
       }
@@ -68,7 +68,7 @@
     "menus": {
       "scm/title": [
         {
-          "command": "llmCommitMessage.generate",
+          "command": "kargnas.aiCommit.generate",
           "group": "navigation",
           "when": "scmProvider == git",
           "icon": "$(sparkle)"
@@ -76,7 +76,7 @@
       ],
       "scm/inputBox": [
         {
-          "command": "llmCommitMessage.generate",
+          "command": "kargnas.aiCommit.generate",
           "group": "kargnas",
           "when": "scmProvider == git",
           "icon": "$(wand)"
@@ -84,50 +84,50 @@
       ],
       "editor/context": [
         {
-          "command": "llmCommitMessage.openInGitHub",
+          "command": "kargnas.aiCommit.openInGitHub",
           "group": "navigation@99",
           "when": "editorTextFocus && resourceScheme == file"
         }
       ],
       "editor/title/context": [
         {
-          "command": "llmCommitMessage.openInGitHub",
+          "command": "kargnas.aiCommit.openInGitHub",
           "group": "navigation",
           "when": "resourceScheme == file"
         }
       ],
       "explorer/context": [
         {
-          "command": "llmCommitMessage.openInGitHub",
+          "command": "kargnas.aiCommit.openInGitHub",
           "group": "navigation@99",
           "when": "resourceScheme == file"
         }
       ]
     },
     "configuration": {
-      "title": "LLM Commit Message",
+      "title": "Kargnas - AI Commit",
       "properties": {
-        "llmCommitMessage.apiKey": {
+        "kargnas.aiCommit.apiKey": {
           "type": "string",
           "default": "",
           "description": "OpenRouter API key"
         },
-        "llmCommitMessage.model": {
+        "kargnas.aiCommit.model": {
           "type": "string",
           "default": "google/gemini-2.5-flash-lite",
           "description": "Model id"
         },
-        "llmCommitMessage.endpoint": {
+        "kargnas.aiCommit.endpoint": {
           "type": "string",
           "default": "https://openrouter.ai/api/v1/chat/completions",
           "description": "OpenRouter endpoint"
         },
-        "llmCommitMessage.endpointRewrite": {
+        "kargnas.aiCommit.endpointRewrite": {
           "type": "boolean",
           "default": true,
           "description": "Auto-rewrite legacy endpoints (e.g., /v1/responses -> /alpha/responses)."
         },
-        "llmCommitMessage.transport": {
+        "kargnas.aiCommit.transport": {
           "type": "string",
           "enum": [
             "fetch",
@@ -136,15 +136,15 @@
           "default": "fetch",
           "description": "HTTP transport (curl is robust behind strict proxies)."
         },
-        "llmCommitMessage.requestTimeoutMs": {
+        "kargnas.aiCommit.requestTimeoutMs": {
           "type": "number",
           "default": 25000
         },
-        "llmCommitMessage.logRawResponse": {
+        "kargnas.aiCommit.logRawResponse": {
           "type": "boolean",
           "default": true
         },
-        "llmCommitMessage.contextIncludeGlobs": {
+        "kargnas.aiCommit.contextIncludeGlobs": {
           "type": "array",
           "items": {
             "type": "string"
@@ -153,7 +153,7 @@
             "**/*"
           ]
         },
-        "llmCommitMessage.contextIgnoreGlobs": {
+        "kargnas.aiCommit.contextIgnoreGlobs": {
           "type": "array",
           "items": {
             "type": "string"
@@ -168,88 +168,88 @@
             "**/*.jpg"
           ]
         },
-        "llmCommitMessage.maxFilePatchBytes": {
+        "kargnas.aiCommit.maxFilePatchBytes": {
           "type": "number",
           "default": 12000
         },
-        "llmCommitMessage.maxPatchBytes": {
+        "kargnas.aiCommit.maxPatchBytes": {
           "type": "number",
           "default": 50000
         },
-        "llmCommitMessage.previousCommitLimit": {
+        "kargnas.aiCommit.previousCommitLimit": {
           "type": "number",
           "default": 10,
           "description": "Max first-line previous commits to include in the prompt."
         },
-        "llmCommitMessage.openTabsLimit": {
+        "kargnas.aiCommit.openTabsLimit": {
           "type": "number",
           "default": 10,
           "description": "How many open editor tabs to list in the context (0 to disable)."
         },
-        "llmCommitMessage.terminalLogLines": {
+        "kargnas.aiCommit.terminalLogLines": {
           "type": "number",
           "default": 20,
           "description": "How many recent integrated terminal lines to include (0 to disable)."
         },
-        "llmCommitMessage.projectTreeMaxEntries": {
+        "kargnas.aiCommit.projectTreeMaxEntries": {
           "type": "number",
           "default": 400,
           "description": "Max rendered lines for the project tree section."
         },
-        "llmCommitMessage.heavyDiffMaxLines": {
+        "kargnas.aiCommit.heavyDiffMaxLines": {
           "type": "number",
           "default": 500,
           "description": "Max lines per file snapshot appended when a file shows 3+ staged hunks."
         },
-        "llmCommitMessage.heavyDiffMaxFiles": {
+        "kargnas.aiCommit.heavyDiffMaxFiles": {
           "type": "number",
           "default": 3,
           "description": "Max number of staged file snapshots to append for heavy diffs."
         },
-        "llmCommitMessage.logPromptMaxChars": {
+        "kargnas.aiCommit.logPromptMaxChars": {
           "type": "number",
           "default": 0,
           "description": "Max characters to log for system/user prompts (0 = unlimited, useful for debugging full prompts)."
         },
-        "llmCommitMessage.referer": {
+        "kargnas.aiCommit.referer": {
           "type": "string",
           "default": "https://kargn.as"
         },
-        "llmCommitMessage.title": {
+        "kargnas.aiCommit.title": {
           "type": "string",
           "default": "kargnas - Commit AI"
         },
-        "llmCommitMessage.commitLanguage": {
+        "kargnas.aiCommit.commitLanguage": {
           "type": "string",
           "default": "auto",
           "description": "Preferred language for commit subject/body (auto keeps default British English)."
         },
-        "llmCommitMessage.systemPrompt": {
+        "kargnas.aiCommit.systemPrompt": {
           "type": "string",
           "default": "You write excellent Conventional Commits for engineers and PMs."
         },
         "kargnasCommitAI.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Deprecated alias for llmCommitMessage.apiKey.",
+          "description": "Deprecated alias for kargnas.aiCommit.apiKey.",
           "deprecationMessage": "Rename to llmCommitMessage.apiKey."
         },
         "kargnasCommitAI.model": {
           "type": "string",
           "default": "google/gemini-2.5-flash-lite",
-          "description": "Deprecated alias for llmCommitMessage.model.",
+          "description": "Deprecated alias for kargnas.aiCommit.model.",
           "deprecationMessage": "Rename to llmCommitMessage.model."
         },
         "kargnasCommitAI.endpoint": {
           "type": "string",
           "default": "https://openrouter.ai/api/v1/chat/completions",
-          "description": "Deprecated alias for llmCommitMessage.endpoint.",
+          "description": "Deprecated alias for kargnas.aiCommit.endpoint.",
           "deprecationMessage": "Rename to llmCommitMessage.endpoint."
         },
         "kargnasCommitAI.endpointRewrite": {
           "type": "boolean",
           "default": true,
-          "description": "Deprecated alias for llmCommitMessage.endpointRewrite.",
+          "description": "Deprecated alias for kargnas.aiCommit.endpointRewrite.",
           "deprecationMessage": "Rename to llmCommitMessage.endpointRewrite."
         },
         "kargnasCommitAI.transport": {
@@ -259,19 +259,19 @@
             "curl"
           ],
           "default": "fetch",
-          "description": "Deprecated alias for llmCommitMessage.transport.",
+          "description": "Deprecated alias for kargnas.aiCommit.transport.",
           "deprecationMessage": "Rename to llmCommitMessage.transport."
         },
         "kargnasCommitAI.requestTimeoutMs": {
           "type": "number",
           "default": 25000,
-          "description": "Deprecated alias for llmCommitMessage.requestTimeoutMs.",
+          "description": "Deprecated alias for kargnas.aiCommit.requestTimeoutMs.",
           "deprecationMessage": "Rename to llmCommitMessage.requestTimeoutMs."
         },
         "kargnasCommitAI.logRawResponse": {
           "type": "boolean",
           "default": true,
-          "description": "Deprecated alias for llmCommitMessage.logRawResponse.",
+          "description": "Deprecated alias for kargnas.aiCommit.logRawResponse.",
           "deprecationMessage": "Rename to llmCommitMessage.logRawResponse."
         },
         "kargnasCommitAI.contextIncludeGlobs": {
@@ -282,7 +282,7 @@
           "default": [
             "**/*"
           ],
-          "description": "Deprecated alias for llmCommitMessage.contextIncludeGlobs.",
+          "description": "Deprecated alias for kargnas.aiCommit.contextIncludeGlobs.",
           "deprecationMessage": "Rename to llmCommitMessage.contextIncludeGlobs."
         },
         "kargnasCommitAI.contextIgnoreGlobs": {
@@ -299,85 +299,85 @@
             "**/*.png",
             "**/*.jpg"
           ],
-          "description": "Deprecated alias for llmCommitMessage.contextIgnoreGlobs.",
+          "description": "Deprecated alias for kargnas.aiCommit.contextIgnoreGlobs.",
           "deprecationMessage": "Rename to llmCommitMessage.contextIgnoreGlobs."
         },
         "kargnasCommitAI.maxFilePatchBytes": {
           "type": "number",
           "default": 12000,
-          "description": "Deprecated alias for llmCommitMessage.maxFilePatchBytes.",
+          "description": "Deprecated alias for kargnas.aiCommit.maxFilePatchBytes.",
           "deprecationMessage": "Rename to llmCommitMessage.maxFilePatchBytes."
         },
         "kargnasCommitAI.maxPatchBytes": {
           "type": "number",
           "default": 50000,
-          "description": "Deprecated alias for llmCommitMessage.maxPatchBytes.",
+          "description": "Deprecated alias for kargnas.aiCommit.maxPatchBytes.",
           "deprecationMessage": "Rename to llmCommitMessage.maxPatchBytes."
         },
         "kargnasCommitAI.previousCommitLimit": {
           "type": "number",
           "default": 10,
-          "description": "Deprecated alias for llmCommitMessage.previousCommitLimit.",
+          "description": "Deprecated alias for kargnas.aiCommit.previousCommitLimit.",
           "deprecationMessage": "Rename to llmCommitMessage.previousCommitLimit."
         },
         "kargnasCommitAI.openTabsLimit": {
           "type": "number",
           "default": 10,
-          "description": "Deprecated alias for llmCommitMessage.openTabsLimit.",
+          "description": "Deprecated alias for kargnas.aiCommit.openTabsLimit.",
           "deprecationMessage": "Rename to llmCommitMessage.openTabsLimit."
         },
         "kargnasCommitAI.terminalLogLines": {
           "type": "number",
           "default": 20,
-          "description": "Deprecated alias for llmCommitMessage.terminalLogLines.",
+          "description": "Deprecated alias for kargnas.aiCommit.terminalLogLines.",
           "deprecationMessage": "Rename to llmCommitMessage.terminalLogLines."
         },
         "kargnasCommitAI.projectTreeMaxEntries": {
           "type": "number",
           "default": 400,
-          "description": "Deprecated alias for llmCommitMessage.projectTreeMaxEntries.",
+          "description": "Deprecated alias for kargnas.aiCommit.projectTreeMaxEntries.",
           "deprecationMessage": "Rename to llmCommitMessage.projectTreeMaxEntries."
         },
         "kargnasCommitAI.heavyDiffMaxLines": {
           "type": "number",
           "default": 500,
-          "description": "Deprecated alias for llmCommitMessage.heavyDiffMaxLines.",
+          "description": "Deprecated alias for kargnas.aiCommit.heavyDiffMaxLines.",
           "deprecationMessage": "Rename to llmCommitMessage.heavyDiffMaxLines."
         },
         "kargnasCommitAI.heavyDiffMaxFiles": {
           "type": "number",
           "default": 3,
-          "description": "Deprecated alias for llmCommitMessage.heavyDiffMaxFiles.",
+          "description": "Deprecated alias for kargnas.aiCommit.heavyDiffMaxFiles.",
           "deprecationMessage": "Rename to llmCommitMessage.heavyDiffMaxFiles."
         },
         "kargnasCommitAI.logPromptMaxChars": {
           "type": "number",
           "default": 0,
-          "description": "Deprecated alias for llmCommitMessage.logPromptMaxChars.",
+          "description": "Deprecated alias for kargnas.aiCommit.logPromptMaxChars.",
           "deprecationMessage": "Rename to llmCommitMessage.logPromptMaxChars."
         },
         "kargnasCommitAI.referer": {
           "type": "string",
           "default": "https://kargn.as",
-          "description": "Deprecated alias for llmCommitMessage.referer.",
+          "description": "Deprecated alias for kargnas.aiCommit.referer.",
           "deprecationMessage": "Rename to llmCommitMessage.referer."
         },
         "kargnasCommitAI.title": {
           "type": "string",
           "default": "kargnas - Commit AI",
-          "description": "Deprecated alias for llmCommitMessage.title.",
+          "description": "Deprecated alias for kargnas.aiCommit.title.",
           "deprecationMessage": "Rename to llmCommitMessage.title."
         },
         "kargnasCommitAI.commitLanguage": {
           "type": "string",
           "default": "auto",
-          "description": "Deprecated alias for llmCommitMessage.commitLanguage.",
+          "description": "Deprecated alias for kargnas.aiCommit.commitLanguage.",
           "deprecationMessage": "Rename to llmCommitMessage.commitLanguage."
         },
         "kargnasCommitAI.systemPrompt": {
           "type": "string",
           "default": "You write excellent Conventional Commits for engineers and PMs.",
-          "description": "Deprecated alias for llmCommitMessage.systemPrompt.",
+          "description": "Deprecated alias for kargnas.aiCommit.systemPrompt.",
           "deprecationMessage": "Rename to llmCommitMessage.systemPrompt."
         },
         "karsCommitAI.apiKey": {
@@ -531,6 +531,141 @@
           "default": "You write excellent Conventional Commits for engineers and PMs.",
           "description": "Deprecated alias for kargnasCommitAI.systemPrompt.",
           "deprecationMessage": "Rename to kargnasCommitAI.systemPrompt."
+        },
+        "llmCommitMessage.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Deprecated alias for kargnas.aiCommit.apiKey.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.apiKey."
+        },
+        "llmCommitMessage.model": {
+          "type": "string",
+          "default": "google/gemini-2.5-flash-lite",
+          "description": "Deprecated alias for kargnas.aiCommit.model.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.model."
+        },
+        "llmCommitMessage.endpoint": {
+          "type": "string",
+          "default": "https://openrouter.ai/api/v1/chat/completions",
+          "description": "Deprecated alias for kargnas.aiCommit.endpoint.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.endpoint."
+        },
+        "llmCommitMessage.endpointRewrite": {
+          "type": "boolean",
+          "default": true,
+          "description": "Deprecated alias for kargnas.aiCommit.endpointRewrite.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.endpointRewrite."
+        },
+        "llmCommitMessage.transport": {
+          "type": "string",
+          "enum": ["fetch", "curl"],
+          "default": "fetch",
+          "description": "Deprecated alias for kargnas.aiCommit.transport.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.transport."
+        },
+        "llmCommitMessage.requestTimeoutMs": {
+          "type": "number",
+          "default": 25000,
+          "description": "Deprecated alias for kargnas.aiCommit.requestTimeoutMs.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.requestTimeoutMs."
+        },
+        "llmCommitMessage.logRawResponse": {
+          "type": "boolean",
+          "default": true,
+          "description": "Deprecated alias for kargnas.aiCommit.logRawResponse.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.logRawResponse."
+        },
+        "llmCommitMessage.contextIncludeGlobs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["**/*"],
+          "description": "Deprecated alias for kargnas.aiCommit.contextIncludeGlobs.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.contextIncludeGlobs."
+        },
+        "llmCommitMessage.contextIgnoreGlobs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["**/*.lock", "dist/**", "build/**", "out/**", "**/*.svg", "**/*.png", "**/*.jpg"],
+          "description": "Deprecated alias for kargnas.aiCommit.contextIgnoreGlobs.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.contextIgnoreGlobs."
+        },
+        "llmCommitMessage.maxFilePatchBytes": {
+          "type": "number",
+          "default": 12000,
+          "description": "Deprecated alias for kargnas.aiCommit.maxFilePatchBytes.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.maxFilePatchBytes."
+        },
+        "llmCommitMessage.maxPatchBytes": {
+          "type": "number",
+          "default": 50000,
+          "description": "Deprecated alias for kargnas.aiCommit.maxPatchBytes.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.maxPatchBytes."
+        },
+        "llmCommitMessage.previousCommitLimit": {
+          "type": "number",
+          "default": 10,
+          "description": "Deprecated alias for kargnas.aiCommit.previousCommitLimit.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.previousCommitLimit."
+        },
+        "llmCommitMessage.openTabsLimit": {
+          "type": "number",
+          "default": 10,
+          "description": "Deprecated alias for kargnas.aiCommit.openTabsLimit.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.openTabsLimit."
+        },
+        "llmCommitMessage.terminalLogLines": {
+          "type": "number",
+          "default": 20,
+          "description": "Deprecated alias for kargnas.aiCommit.terminalLogLines.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.terminalLogLines."
+        },
+        "llmCommitMessage.projectTreeMaxEntries": {
+          "type": "number",
+          "default": 400,
+          "description": "Deprecated alias for kargnas.aiCommit.projectTreeMaxEntries.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.projectTreeMaxEntries."
+        },
+        "llmCommitMessage.heavyDiffMaxLines": {
+          "type": "number",
+          "default": 500,
+          "description": "Deprecated alias for kargnas.aiCommit.heavyDiffMaxLines.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.heavyDiffMaxLines."
+        },
+        "llmCommitMessage.heavyDiffMaxFiles": {
+          "type": "number",
+          "default": 3,
+          "description": "Deprecated alias for kargnas.aiCommit.heavyDiffMaxFiles.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.heavyDiffMaxFiles."
+        },
+        "llmCommitMessage.logPromptMaxChars": {
+          "type": "number",
+          "default": 0,
+          "description": "Deprecated alias for kargnas.aiCommit.logPromptMaxChars.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.logPromptMaxChars."
+        },
+        "llmCommitMessage.referer": {
+          "type": "string",
+          "default": "https://kargn.as",
+          "description": "Deprecated alias for kargnas.aiCommit.referer.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.referer."
+        },
+        "llmCommitMessage.title": {
+          "type": "string",
+          "default": "kargnas - Commit AI",
+          "description": "Deprecated alias for kargnas.aiCommit.title.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.title."
+        },
+        "llmCommitMessage.commitLanguage": {
+          "type": "string",
+          "default": "auto",
+          "description": "Deprecated alias for kargnas.aiCommit.commitLanguage.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.commitLanguage."
+        },
+        "llmCommitMessage.systemPrompt": {
+          "type": "string",
+          "default": "You write excellent Conventional Commits for engineers and PMs.",
+          "description": "Deprecated alias for kargnas.aiCommit.systemPrompt.",
+          "deprecationMessage": "Rename to kargnas.aiCommit.systemPrompt."
         },
         "dish-ai-commit.features.branchName.systemPrompt": {
           "type": "string",
