@@ -47,7 +47,7 @@
 
 ### 🌍 多語言提交訊息
 可以用你習慣的語言撰寫提交訊息:
-- 將 `kargnasCommitAI.commitLanguage` 設為 `"ko"` 產生韓文,`"ja"` 產生日文,`"auto"` 則使用英文
+- 將 `kargnas.aiCommit.commitLanguage` 設為 `"ko"` 產生韓文,`"ja"` 產生日文,`"auto"` 則使用英文
 
 ### 🔍 除錯與透明度
 - **完整請求記錄** - 所有 API 請求都會記錄到輸出面板
@@ -83,31 +83,31 @@
 
 | 設定 | 預設值 | 說明 |
 |------|--------|------|
-| `kargnasCommitAI.apiKey` | `""` | OpenRouter API 金鑰 (必要) |
-| `kargnasCommitAI.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter 模型 ID |
-| `kargnasCommitAI.endpoint` | OpenRouter API | 自訂 API 端點 (進階) |
-| `kargnasCommitAI.commitLanguage` | `"auto"` | 提交訊息語言 (例如 `"ko"`、`"ja"`) |
-| `kargnasCommitAI.transport` | `"fetch"` | HTTP 傳輸方式 (`"fetch"` 或 `"curl"`) |
-| `kargnasCommitAI.requestTimeoutMs` | `25000` | API 請求逾時時間(毫秒) |
-| `kargnasCommitAI.logRawResponse` | `true` | 將原始 API 回應記錄到輸出面板 |
-| `kargnasCommitAI.contextIncludeGlobs` | `["**/*"]` | 包含在情境中的檔案模式 |
-| `kargnasCommitAI.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | 從情境中排除的檔案模式 |
-| `kargnasCommitAI.maxFilePatchBytes` | `12000` | 單一檔案差異的最大位元組數 |
-| `kargnasCommitAI.maxPatchBytes` | `50000` | 總差異的最大位元組數 |
-| `kargnasCommitAI.previousCommitLimit` | `10` | 包含的最近提交數量 |
-| `kargnasCommitAI.openTabsLimit` | `10` | 包含的開啟分頁數量 |
-| `kargnasCommitAI.terminalLogLines` | `20` | 包含的終端機記錄行數 |
-| `kargnasCommitAI.projectTreeMaxEntries` | `400` | 專案樹狀結構的最大條目數 |
-| `kargnasCommitAI.logPromptMaxChars` | `0` | 提示詞記錄截斷長度(0 = 無限制) |
+| `kargnas.aiCommit.apiKey` | `""` | OpenRouter API 金鑰 (必要) |
+| `kargnas.aiCommit.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter 模型 ID |
+| `kargnas.aiCommit.endpoint` | OpenRouter API | 自訂 API 端點 (進階) |
+| `kargnas.aiCommit.commitLanguage` | `"auto"` | 提交訊息語言 (例如 `"ko"`、`"ja"`) |
+| `kargnas.aiCommit.transport` | `"fetch"` | HTTP 傳輸方式 (`"fetch"` 或 `"curl"`) |
+| `kargnas.aiCommit.requestTimeoutMs` | `25000` | API 請求逾時時間(毫秒) |
+| `kargnas.aiCommit.logRawResponse` | `true` | 將原始 API 回應記錄到輸出面板 |
+| `kargnas.aiCommit.contextIncludeGlobs` | `["**/*"]` | 包含在情境中的檔案模式 |
+| `kargnas.aiCommit.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | 從情境中排除的檔案模式 |
+| `kargnas.aiCommit.maxFilePatchBytes` | `12000` | 單一檔案差異的最大位元組數 |
+| `kargnas.aiCommit.maxPatchBytes` | `50000` | 總差異的最大位元組數 |
+| `kargnas.aiCommit.previousCommitLimit` | `10` | 包含的最近提交數量 |
+| `kargnas.aiCommit.openTabsLimit` | `10` | 包含的開啟分頁數量 |
+| `kargnas.aiCommit.terminalLogLines` | `20` | 包含的終端機記錄行數 |
+| `kargnas.aiCommit.projectTreeMaxEntries` | `400` | 專案樹狀結構的最大條目數 |
+| `kargnas.aiCommit.logPromptMaxChars` | `0` | 提示詞記錄截斷長度(0 = 無限制) |
 
 ### 設定範例
 
 ```json
 {
-  "kargnasCommitAI.apiKey": "sk-or-v1-...",
-  "kargnasCommitAI.model": "anthropic/claude-3.5-sonnet",
-  "kargnasCommitAI.commitLanguage": "ko",
-  "kargnasCommitAI.logPromptMaxChars": 0
+  "kargnas.aiCommit.apiKey": "sk-or-v1-...",
+  "kargnas.aiCommit.model": "anthropic/claude-3.5-sonnet",
+  "kargnas.aiCommit.commitLanguage": "ko",
+  "kargnas.aiCommit.logPromptMaxChars": 0
 }
 ```
 
@@ -134,10 +134,10 @@
 
 ## 🛠️ 指令
 
-- **AI Commit** (`kargnasCommitAI.generate`) - 從暫存的變更產生提交訊息
-- **Ping OpenRouter** (`kargnasCommitAI.pingOpenRouter`) - 測試 API 連線
-- **Show Last Payload** (`kargnasCommitAI.showLastPayload`) - 查看發送給 AI 的最後一個提示詞
-- **Open in GitHub** (`kargnasCommitAI.openInGitHub`) - 在 GitHub 中開啟目前檔案(額外功能!)
+- **AI Commit** (`kargnas.aiCommit.generate`) - 從暫存的變更產生提交訊息
+- **Ping OpenRouter** (`kargnas.aiCommit.pingOpenRouter`) - 測試 API 連線
+- **Show Last Payload** (`kargnas.aiCommit.showLastPayload`) - 查看發送給 AI 的最後一個提示詞
+- **Open in GitHub** (`kargnas.aiCommit.openInGitHub`) - 在 GitHub 中開啟目前檔案(額外功能!)
 
 ## 🐛 疑難排解
 
@@ -157,7 +157,7 @@
 - 使用 "Show Last Payload" 查看傳送了什麼情境資訊
 
 ### 產生的訊息語言不對
-將 `kargnasCommitAI.commitLanguage` 設為你想要的語言代碼(例如 `"ko"`、`"ja"`)
+將 `kargnas.aiCommit.commitLanguage` 設為你想要的語言代碼(例如 `"ko"`、`"ja"`)
 
 ## 📄 授權
 

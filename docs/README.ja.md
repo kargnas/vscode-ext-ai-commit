@@ -47,7 +47,7 @@ AI がコードの変更内容を分析して、高品質な git コミットメ
 
 ### 🌍 多言語コミットメッセージ
 お好みの言語でコミットメッセージを作成できます:
-- `kargnasCommitAI.commitLanguage` を `"ko"` に設定すると韓国語、`"ja"` で日本語、`"auto"` は英語で生成されます
+- `kargnas.aiCommit.commitLanguage` を `"ko"` に設定すると韓国語、`"ja"` で日本語、`"auto"` は英語で生成されます
 
 ### 🔍 デバッグと透明性
 - **完全なリクエストログ** - すべての API リクエストが出力パネルに記録されます
@@ -83,31 +83,31 @@ AI がコードの変更内容を分析して、高品質な git コミットメ
 
 | 設定 | デフォルト値 | 説明 |
 |------|------------|------|
-| `kargnasCommitAI.apiKey` | `""` | OpenRouter API キー (必須) |
-| `kargnasCommitAI.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter モデル ID |
-| `kargnasCommitAI.endpoint` | OpenRouter API | カスタム API エンドポイント (上級者向け) |
-| `kargnasCommitAI.commitLanguage` | `"auto"` | コミットメッセージの言語 (例: `"ko"`、`"ja"`) |
-| `kargnasCommitAI.transport` | `"fetch"` | HTTP 転送方式 (`"fetch"` または `"curl"`) |
-| `kargnasCommitAI.requestTimeoutMs` | `25000` | API リクエストタイムアウト (ミリ秒) |
-| `kargnasCommitAI.logRawResponse` | `true` | 生 API レスポンスを出力パネルに記録 |
-| `kargnasCommitAI.contextIncludeGlobs` | `["**/*"]` | コンテキストに含めるファイルパターン |
-| `kargnasCommitAI.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | コンテキストから除外するファイルパターン |
-| `kargnasCommitAI.maxFilePatchBytes` | `12000` | ファイルごとの最大差分サイズ |
-| `kargnasCommitAI.maxPatchBytes` | `50000` | 全体の最大差分サイズ |
-| `kargnasCommitAI.previousCommitLimit` | `10` | 含める最近のコミット数 |
-| `kargnasCommitAI.openTabsLimit` | `10` | 含める開いているタブ数 |
-| `kargnasCommitAI.terminalLogLines` | `20` | 含めるターミナルログ行数 |
-| `kargnasCommitAI.projectTreeMaxEntries` | `400` | プロジェクトツリーの最大エントリ数 |
-| `kargnasCommitAI.logPromptMaxChars` | `0` | プロンプトログの切り捨て長さ (0 = 無制限) |
+| `kargnas.aiCommit.apiKey` | `""` | OpenRouter API キー (必須) |
+| `kargnas.aiCommit.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter モデル ID |
+| `kargnas.aiCommit.endpoint` | OpenRouter API | カスタム API エンドポイント (上級者向け) |
+| `kargnas.aiCommit.commitLanguage` | `"auto"` | コミットメッセージの言語 (例: `"ko"`、`"ja"`) |
+| `kargnas.aiCommit.transport` | `"fetch"` | HTTP 転送方式 (`"fetch"` または `"curl"`) |
+| `kargnas.aiCommit.requestTimeoutMs` | `25000` | API リクエストタイムアウト (ミリ秒) |
+| `kargnas.aiCommit.logRawResponse` | `true` | 生 API レスポンスを出力パネルに記録 |
+| `kargnas.aiCommit.contextIncludeGlobs` | `["**/*"]` | コンテキストに含めるファイルパターン |
+| `kargnas.aiCommit.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | コンテキストから除外するファイルパターン |
+| `kargnas.aiCommit.maxFilePatchBytes` | `12000` | ファイルごとの最大差分サイズ |
+| `kargnas.aiCommit.maxPatchBytes` | `50000` | 全体の最大差分サイズ |
+| `kargnas.aiCommit.previousCommitLimit` | `10` | 含める最近のコミット数 |
+| `kargnas.aiCommit.openTabsLimit` | `10` | 含める開いているタブ数 |
+| `kargnas.aiCommit.terminalLogLines` | `20` | 含めるターミナルログ行数 |
+| `kargnas.aiCommit.projectTreeMaxEntries` | `400` | プロジェクトツリーの最大エントリ数 |
+| `kargnas.aiCommit.logPromptMaxChars` | `0` | プロンプトログの切り捨て長さ (0 = 無制限) |
 
 ### 設定例
 
 ```json
 {
-  "kargnasCommitAI.apiKey": "sk-or-v1-...",
-  "kargnasCommitAI.model": "anthropic/claude-3.5-sonnet",
-  "kargnasCommitAI.commitLanguage": "ja",
-  "kargnasCommitAI.logPromptMaxChars": 0
+  "kargnas.aiCommit.apiKey": "sk-or-v1-...",
+  "kargnas.aiCommit.model": "anthropic/claude-3.5-sonnet",
+  "kargnas.aiCommit.commitLanguage": "ja",
+  "kargnas.aiCommit.logPromptMaxChars": 0
 }
 ```
 
@@ -134,10 +134,10 @@ AI がコードの変更内容を分析して、高品質な git コミットメ
 
 ## 🛠️ コマンド
 
-- **AI Commit** (`kargnasCommitAI.generate`) - ステージされた変更からコミットメッセージを生成
-- **Ping OpenRouter** (`kargnasCommitAI.pingOpenRouter`) - API 接続をテスト
-- **Show Last Payload** (`kargnasCommitAI.showLastPayload`) - AI に送信した最後のプロンプトを表示
-- **Open in GitHub** (`kargnasCommitAI.openInGitHub`) - 現在のファイルを GitHub で開く (ボーナス機能!)
+- **AI Commit** (`kargnas.aiCommit.generate`) - ステージされた変更からコミットメッセージを生成
+- **Ping OpenRouter** (`kargnas.aiCommit.pingOpenRouter`) - API 接続をテスト
+- **Show Last Payload** (`kargnas.aiCommit.showLastPayload`) - AI に送信した最後のプロンプトを表示
+- **Open in GitHub** (`kargnas.aiCommit.openInGitHub`) - 現在のファイルを GitHub で開く (ボーナス機能!)
 
 ## 🐛 トラブルシューティング
 
@@ -157,7 +157,7 @@ AI がコードの変更内容を分析して、高品質な git コミットメ
 - "Show Last Payload" でどんなコンテキストが送信されたか確認
 
 ### 生成されたメッセージの言語が違う
-`kargnasCommitAI.commitLanguage` を希望の言語コードに設定してください (例: `"ko"`、`"ja"`)
+`kargnas.aiCommit.commitLanguage` を希望の言語コードに設定してください (例: `"ko"`、`"ja"`)
 
 ## 📄 ライセンス
 

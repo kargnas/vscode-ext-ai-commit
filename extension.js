@@ -14,7 +14,6 @@ let prProviderWarnedNoKey = false;
 let prProviderRegistered = false;
 const OUTPUT_CHANNEL_NAME = 'Kargnas - AI Commit';
 const SETTINGS_PREFIX = 'kargnas.aiCommit';
-const LEGACY_SETTINGS_PREFIXES = ['llmCommitMessage', 'kargnasCommitAI', 'karsCommitAI'];
 
 function log(...args){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).appendLine(args.join(' ')); }
 function show(){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).show(true); }
@@ -67,13 +66,7 @@ function clampNumber(value, fallback, min, max){
 }
 
 function readSetting(config, suffix){
-  const preferred = config.get(`${SETTINGS_PREFIX}.${suffix}`);
-  if(preferred !== undefined) return preferred;
-  for(const legacyPrefix of LEGACY_SETTINGS_PREFIXES){
-    const legacyValue = config.get(`${legacyPrefix}.${suffix}`);
-    if(legacyValue !== undefined) return legacyValue;
-  }
-  return undefined;
+  return config.get(`${SETTINGS_PREFIX}.${suffix}`);
 }
 
 const ALLOWED_TYPES = ['feat','fix','perf','refactor','style','docs','test','build','ci','chore','revert'];
@@ -203,7 +196,7 @@ function getConfig(){
     maxFilePatchBytes: readSetting(c, 'maxFilePatchBytes') || 12000,
     maxPatchBytes: readSetting(c, 'maxPatchBytes') || 50000,
     referer: readSetting(c, 'referer') || 'https://kargn.as',
-    title: readSetting(c, 'title') || 'kargnas - Commit AI',
+    title: readSetting(c, 'title') || 'kargnas',
     systemPrompt: (compat ? compat + '\n\n' : '') + (readSetting(c, 'systemPrompt') || SYSTEM_PROMPT),
     previousCommitLimit: clampNumber(readSetting(c, 'previousCommitLimit'), 10, 1, 25),
     openTabsLimit: clampNumber(readSetting(c, 'openTabsLimit'), 10, 0, 40),
@@ -1347,7 +1340,7 @@ async function providePullRequestTitleAndDescription(prContext, cancellationToke
   if(!cfg.apiKey){
     if(!prProviderWarnedNoKey){
       prProviderWarnedNoKey = true;
-      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 kargnas.aiCommit.apiKey 를 먼저 설정해. (예전 llmCommitMessage.*, kargnasCommitAI.*, karsCommitAI.* 키도 계속 인식해.)');
+      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 kargnas.aiCommit.apiKey 를 먼저 설정해.');
     }
     return undefined;
   }
@@ -1444,7 +1437,7 @@ async function generate(...commandArgs){
     if(!stagedOk) { log('Aborted: no staged changes.'); return; }
 
     const cfg = getConfig();
-    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set kargnas.aiCommit.apiKey first (legacy llmCommitMessage.*, kargnasCommitAI.*, karsCommitAI.* are still read)');
+    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set kargnas.aiCommit.apiKey first');
 
     const context = await collectContext(repo, cfg);
     const baseSystemPrompt = cfg.systemPrompt || SYSTEM_PROMPT;
@@ -1612,74 +1605,14 @@ async function openInGitHub(uri){
   }
 }
 
-async function migrateSettings(){
-  const config = vscode.workspace.getConfiguration();
-  const newPrefix = SETTINGS_PREFIX;
-  let migrated = false;
-  const migratedKeys = [];
-
-  const settingsToMigrate = [
-    'apiKey', 'model', 'endpoint', 'endpointRewrite', 'transport',
-    'requestTimeoutMs', 'logRawResponse', 'contextIncludeGlobs',
-    'contextIgnoreGlobs', 'maxFilePatchBytes', 'maxPatchBytes',
-    'previousCommitLimit', 'openTabsLimit', 'terminalLogLines',
-    'projectTreeMaxEntries', 'heavyDiffMaxLines', 'heavyDiffMaxFiles',
-    'logPromptMaxChars', 'referer', 'title', 'commitLanguage', 'systemPrompt'
-  ];
-
-  for(const legacyPrefix of LEGACY_SETTINGS_PREFIXES){
-    for(const key of settingsToMigrate){
-      const legacyKey = `${legacyPrefix}.${key}`;
-      const newKey = `${newPrefix}.${key}`;
-      
-      const legacyValue = config.get(legacyKey);
-      const newValue = config.get(newKey);
-      
-      if(legacyValue !== undefined && newValue === undefined){
-        try {
-          await config.update(newKey, legacyValue, vscode.ConfigurationTarget.Global);
-          migrated = true;
-          migratedKeys.push(legacyKey);
-          log(`Migrated setting: ${legacyKey} -> ${newKey}`);
-        } catch(err){
-          log(`Failed to migrate ${legacyKey}: ${err?.message || err}`);
-        }
-      }
-    }
-  }
-
-  if(migrated){
-    const message = `Kargnas - AI Commit: Settings migrated from old namespace (${migratedKeys.length} settings). You can remove old settings.`;
-    vscode.window.showInformationMessage(message);
-    log(message);
-  }
-}
-
 function activate(context){
   log('Kargnas - AI Commit activated at ' + new Date().toISOString());
-  
-  migrateSettings().catch(err => {
-    log('Settings migration failed: ' + (err?.message || err));
-  });
   
   // Terminal capture removed: onDidWriteTerminalData requires proposed API
   context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.showLastPayload', showLast));
   context.subscriptions.push(vscode.commands.registerCommand('kargnas.aiCommit.openInGitHub', openInGitHub));
-  
-  // Legacy command aliases for backward compatibility
-  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.generate', generate));
-  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.pingOpenRouter', ping));
-  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.showLastPayload', showLast));
-  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.openInGitHub', openInGitHub));
-  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.generate', generate));
-  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.pingOpenRouter', ping));
-  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.showLastPayload', showLast));
-  context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.openInGitHub', openInGitHub));
-  context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.generate', generate));
-  context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.pingOpenRouter', ping));
-  context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.showLastPayload', showLast));
   
   registerPullRequestProvider(context);
 }

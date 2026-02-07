@@ -47,7 +47,7 @@ AI가 코드 변경사항을 분석해서 고품질 커밋 메시지를 자동�
 
 ### 🌍 다국어 커밋 메시지
 원하는 언어로 커밋 메시지를 작성할 수 있어요:
-- `kargnasCommitAI.commitLanguage`를 `"ko"`로 설정하면 한국어로, `"ja"`면 일본어로, `"auto"`는 영어로 생성됩니다
+- `kargnas.aiCommit.commitLanguage`를 `"ko"`로 설정하면 한국어로, `"ja"`면 일본어로, `"auto"`는 영어로 생성됩니다
 
 ### 🔍 디버깅과 투명성
 - **전체 요청 로깅** - API 요청이 Output 패널에 모두 기록됨
@@ -83,31 +83,31 @@ AI가 코드 변경사항을 분석해서 고품질 커밋 메시지를 자동�
 
 | 설정 | 기본값 | 설명 |
 |------|--------|------|
-| `kargnasCommitAI.apiKey` | `""` | OpenRouter API 키 (필수) |
-| `kargnasCommitAI.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter 모델 ID |
-| `kargnasCommitAI.endpoint` | OpenRouter API | 커스텀 API 엔드포인트 (고급) |
-| `kargnasCommitAI.commitLanguage` | `"auto"` | 커밋 메시지 언어 (예: `"ko"`, `"ja"`) |
-| `kargnasCommitAI.transport` | `"fetch"` | HTTP 전송 방식 (`"fetch"` 또는 `"curl"`) |
-| `kargnasCommitAI.requestTimeoutMs` | `25000` | API 요청 타임아웃 (밀리초) |
-| `kargnasCommitAI.logRawResponse` | `true` | 원본 API 응답을 Output에 로깅 |
-| `kargnasCommitAI.contextIncludeGlobs` | `["**/*"]` | 컨텍스트에 포함할 파일 패턴 |
-| `kargnasCommitAI.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | 컨텍스트에서 제외할 파일 패턴 |
-| `kargnasCommitAI.maxFilePatchBytes` | `12000` | 파일당 최대 diff 크기 |
-| `kargnasCommitAI.maxPatchBytes` | `50000` | 전체 diff 최대 크기 |
-| `kargnasCommitAI.previousCommitLimit` | `10` | 포함할 최근 커밋 개수 |
-| `kargnasCommitAI.openTabsLimit` | `10` | 포함할 열린 탭 개수 |
-| `kargnasCommitAI.terminalLogLines` | `20` | 포함할 터미널 로그 줄 수 |
-| `kargnasCommitAI.projectTreeMaxEntries` | `400` | 프로젝트 트리 최대 항목 수 |
-| `kargnasCommitAI.logPromptMaxChars` | `0` | 프롬프트 로그 자르기 (0 = 무제한) |
+| `kargnas.aiCommit.apiKey` | `""` | OpenRouter API 키 (필수) |
+| `kargnas.aiCommit.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter 모델 ID |
+| `kargnas.aiCommit.endpoint` | OpenRouter API | 커스텀 API 엔드포인트 (고급) |
+| `kargnas.aiCommit.commitLanguage` | `"auto"` | 커밋 메시지 언어 (예: `"ko"`, `"ja"`) |
+| `kargnas.aiCommit.transport` | `"fetch"` | HTTP 전송 방식 (`"fetch"` 또는 `"curl"`) |
+| `kargnas.aiCommit.requestTimeoutMs` | `25000` | API 요청 타임아웃 (밀리초) |
+| `kargnas.aiCommit.logRawResponse` | `true` | 원본 API 응답을 Output에 로깅 |
+| `kargnas.aiCommit.contextIncludeGlobs` | `["**/*"]` | 컨텍스트에 포함할 파일 패턴 |
+| `kargnas.aiCommit.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | 컨텍스트에서 제외할 파일 패턴 |
+| `kargnas.aiCommit.maxFilePatchBytes` | `12000` | 파일당 최대 diff 크기 |
+| `kargnas.aiCommit.maxPatchBytes` | `50000` | 전체 diff 최대 크기 |
+| `kargnas.aiCommit.previousCommitLimit` | `10` | 포함할 최근 커밋 개수 |
+| `kargnas.aiCommit.openTabsLimit` | `10` | 포함할 열린 탭 개수 |
+| `kargnas.aiCommit.terminalLogLines` | `20` | 포함할 터미널 로그 줄 수 |
+| `kargnas.aiCommit.projectTreeMaxEntries` | `400` | 프로젝트 트리 최대 항목 수 |
+| `kargnas.aiCommit.logPromptMaxChars` | `0` | 프롬프트 로그 자르기 (0 = 무제한) |
 
 ### 설정 예시
 
 ```json
 {
-  "kargnasCommitAI.apiKey": "sk-or-v1-...",
-  "kargnasCommitAI.model": "anthropic/claude-3.5-sonnet",
-  "kargnasCommitAI.commitLanguage": "ko",
-  "kargnasCommitAI.logPromptMaxChars": 0
+  "kargnas.aiCommit.apiKey": "sk-or-v1-...",
+  "kargnas.aiCommit.model": "anthropic/claude-3.5-sonnet",
+  "kargnas.aiCommit.commitLanguage": "ko",
+  "kargnas.aiCommit.logPromptMaxChars": 0
 }
 ```
 
@@ -134,10 +134,10 @@ AI가 코드 변경사항을 분석해서 고품질 커밋 메시지를 자동�
 
 ## 🛠️ 명령어
 
-- **AI Commit** (`kargnasCommitAI.generate`) - 스테이징된 변경사항으로 커밋 메시지 생성
-- **Ping OpenRouter** (`kargnasCommitAI.pingOpenRouter`) - API 연결 테스트
-- **Show Last Payload** (`kargnasCommitAI.showLastPayload`) - AI에 보낸 마지막 프롬프트 확인
-- **Open in GitHub** (`kargnasCommitAI.openInGitHub`) - 현재 파일을 GitHub에서 열기 (보너스 기능!)
+- **AI Commit** (`kargnas.aiCommit.generate`) - 스테이징된 변경사항으로 커밋 메시지 생성
+- **Ping OpenRouter** (`kargnas.aiCommit.pingOpenRouter`) - API 연결 테스트
+- **Show Last Payload** (`kargnas.aiCommit.showLastPayload`) - AI에 보낸 마지막 프롬프트 확인
+- **Open in GitHub** (`kargnas.aiCommit.openInGitHub`) - 현재 파일을 GitHub에서 열기 (보너스 기능!)
 
 ## 🐛 문제 해결
 
@@ -157,7 +157,7 @@ AI가 코드 변경사항을 분석해서 고품질 커밋 메시지를 자동�
 - "Show Last Payload"로 어떤 컨텍스트가 전송됐는지 확인
 
 ### 생성된 메시지 언어가 틀림
-`kargnasCommitAI.commitLanguage`를 원하는 언어 코드로 설정하세요 (예: `"ko"`, `"ja"`)
+`kargnas.aiCommit.commitLanguage`를 원하는 언어 코드로 설정하세요 (예: `"ko"`, `"ja"`)
 
 ## 📄 라이선스
 

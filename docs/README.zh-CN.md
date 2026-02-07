@@ -47,7 +47,7 @@ AI 自动分析你的代码改动,生成高质量的 git 提交信息。支持�
 
 ### 🌍 多语言提交信息
 可以用你习惯的语言编写提交信息:
-- 将 `kargnasCommitAI.commitLanguage` 设为 `"ko"` 生成韩语,`"ja"` 生成日语,`"auto"` 则使用英语
+- 将 `kargnas.aiCommit.commitLanguage` 设为 `"ko"` 生成韩语,`"ja"` 生成日语,`"auto"` 则使用英语
 
 ### 🔍 调试与透明度
 - **完整请求日志** - 所有 API 请求都会记录到输出面板
@@ -83,31 +83,31 @@ AI 自动分析你的代码改动,生成高质量的 git 提交信息。支持�
 
 | 设置 | 默认值 | 说明 |
 |------|--------|------|
-| `kargnasCommitAI.apiKey` | `""` | OpenRouter API 密钥 (必需) |
-| `kargnasCommitAI.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter 模型 ID |
-| `kargnasCommitAI.endpoint` | OpenRouter API | 自定义 API 端点 (高级) |
-| `kargnasCommitAI.commitLanguage` | `"auto"` | 提交信息语言 (如 `"ko"`、`"ja"`) |
-| `kargnasCommitAI.transport` | `"fetch"` | HTTP 传输方式 (`"fetch"` 或 `"curl"`) |
-| `kargnasCommitAI.requestTimeoutMs` | `25000` | API 请求超时时间(毫秒) |
-| `kargnasCommitAI.logRawResponse` | `true` | 将原始 API 响应记录到输出面板 |
-| `kargnasCommitAI.contextIncludeGlobs` | `["**/*"]` | 包含在上下文中的文件模式 |
-| `kargnasCommitAI.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | 从上下文中排除的文件模式 |
-| `kargnasCommitAI.maxFilePatchBytes` | `12000` | 单个文件差异的最大字节数 |
-| `kargnasCommitAI.maxPatchBytes` | `50000` | 总差异的最大字节数 |
-| `kargnasCommitAI.previousCommitLimit` | `10` | 包含的最近提交数量 |
-| `kargnasCommitAI.openTabsLimit` | `10` | 包含的打开标签页数量 |
-| `kargnasCommitAI.terminalLogLines` | `20` | 包含的终端日志行数 |
-| `kargnasCommitAI.projectTreeMaxEntries` | `400` | 项目树的最大条目数 |
-| `kargnasCommitAI.logPromptMaxChars` | `0` | 提示词日志截断长度(0 = 无限制) |
+| `kargnas.aiCommit.apiKey` | `""` | OpenRouter API 密钥 (必需) |
+| `kargnas.aiCommit.model` | `"google/gemini-2.5-flash-lite"` | OpenRouter 模型 ID |
+| `kargnas.aiCommit.endpoint` | OpenRouter API | 自定义 API 端点 (高级) |
+| `kargnas.aiCommit.commitLanguage` | `"auto"` | 提交信息语言 (如 `"ko"`、`"ja"`) |
+| `kargnas.aiCommit.transport` | `"fetch"` | HTTP 传输方式 (`"fetch"` 或 `"curl"`) |
+| `kargnas.aiCommit.requestTimeoutMs` | `25000` | API 请求超时时间(毫秒) |
+| `kargnas.aiCommit.logRawResponse` | `true` | 将原始 API 响应记录到输出面板 |
+| `kargnas.aiCommit.contextIncludeGlobs` | `["**/*"]` | 包含在上下文中的文件模式 |
+| `kargnas.aiCommit.contextIgnoreGlobs` | `["**/*.lock", "dist/**", ...]` | 从上下文中排除的文件模式 |
+| `kargnas.aiCommit.maxFilePatchBytes` | `12000` | 单个文件差异的最大字节数 |
+| `kargnas.aiCommit.maxPatchBytes` | `50000` | 总差异的最大字节数 |
+| `kargnas.aiCommit.previousCommitLimit` | `10` | 包含的最近提交数量 |
+| `kargnas.aiCommit.openTabsLimit` | `10` | 包含的打开标签页数量 |
+| `kargnas.aiCommit.terminalLogLines` | `20` | 包含的终端日志行数 |
+| `kargnas.aiCommit.projectTreeMaxEntries` | `400` | 项目树的最大条目数 |
+| `kargnas.aiCommit.logPromptMaxChars` | `0` | 提示词日志截断长度(0 = 无限制) |
 
 ### 配置示例
 
 ```json
 {
-  "kargnasCommitAI.apiKey": "sk-or-v1-...",
-  "kargnasCommitAI.model": "anthropic/claude-3.5-sonnet",
-  "kargnasCommitAI.commitLanguage": "ko",
-  "kargnasCommitAI.logPromptMaxChars": 0
+  "kargnas.aiCommit.apiKey": "sk-or-v1-...",
+  "kargnas.aiCommit.model": "anthropic/claude-3.5-sonnet",
+  "kargnas.aiCommit.commitLanguage": "ko",
+  "kargnas.aiCommit.logPromptMaxChars": 0
 }
 ```
 
@@ -134,10 +134,10 @@ AI 自动分析你的代码改动,生成高质量的 git 提交信息。支持�
 
 ## 🛠️ 命令
 
-- **AI Commit** (`kargnasCommitAI.generate`) - 从暂存的更改生成提交信息
-- **Ping OpenRouter** (`kargnasCommitAI.pingOpenRouter`) - 测试 API 连接
-- **Show Last Payload** (`kargnasCommitAI.showLastPayload`) - 查看发送给 AI 的最后一个提示词
-- **Open in GitHub** (`kargnasCommitAI.openInGitHub`) - 在 GitHub 中打开当前文件(额外功能!)
+- **AI Commit** (`kargnas.aiCommit.generate`) - 从暂存的更改生成提交信息
+- **Ping OpenRouter** (`kargnas.aiCommit.pingOpenRouter`) - 测试 API 连接
+- **Show Last Payload** (`kargnas.aiCommit.showLastPayload`) - 查看发送给 AI 的最后一个提示词
+- **Open in GitHub** (`kargnas.aiCommit.openInGitHub`) - 在 GitHub 中打开当前文件(额外功能!)
 
 ## 🐛 故障排除
 
@@ -157,7 +157,7 @@ AI 自动分析你的代码改动,生成高质量的 git 提交信息。支持�
 - 使用 "Show Last Payload" 查看发送了什么上下文
 
 ### 生成的信息语言不对
-将 `kargnasCommitAI.commitLanguage` 设为你想要的语言代码(如 `"ko"`、`"ja"`)
+将 `kargnas.aiCommit.commitLanguage` 设为你想要的语言代码(如 `"ko"`、`"ja"`)
 
 ## 📄 许可证
 
