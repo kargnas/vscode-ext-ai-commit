@@ -12,9 +12,9 @@ let terminalRemainder = '';
 let terminalBufferHardLimit = 800;
 let prProviderWarnedNoKey = false;
 let prProviderRegistered = false;
-const OUTPUT_CHANNEL_NAME = 'Kargnas Commit AI';
-const SETTINGS_PREFIX = 'kargnasCommitAI';
-const LEGACY_SETTINGS_PREFIX = 'karsCommitAI';
+const OUTPUT_CHANNEL_NAME = 'LLM Commit Message';
+const SETTINGS_PREFIX = 'llmCommitMessage';
+const LEGACY_SETTINGS_PREFIXES = ['kargnasCommitAI', 'karsCommitAI'];
 
 function log(...args){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).appendLine(args.join(' ')); }
 function show(){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).show(true); }
@@ -69,7 +69,11 @@ function clampNumber(value, fallback, min, max){
 function readSetting(config, suffix){
   const preferred = config.get(`${SETTINGS_PREFIX}.${suffix}`);
   if(preferred !== undefined) return preferred;
-  return config.get(`${LEGACY_SETTINGS_PREFIX}.${suffix}`);
+  for(const legacyPrefix of LEGACY_SETTINGS_PREFIXES){
+    const legacyValue = config.get(`${legacyPrefix}.${suffix}`);
+    if(legacyValue !== undefined) return legacyValue;
+  }
+  return undefined;
 }
 
 const ALLOWED_TYPES = ['feat','fix','perf','refactor','style','docs','test','build','ci','chore','revert'];
@@ -1343,7 +1347,7 @@ async function providePullRequestTitleAndDescription(prContext, cancellationToke
   if(!cfg.apiKey){
     if(!prProviderWarnedNoKey){
       prProviderWarnedNoKey = true;
-      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 kargnasCommitAI.apiKey 를 먼저 설정해. (예전 karsCommitAI.* 키도 계속 인식해.)');
+      vscode.window.showWarningMessage('PR 제목/본문 생성을 쓰려면 llmCommitMessage.apiKey 를 먼저 설정해. (예전 kargnasCommitAI.*, karsCommitAI.* 키도 계속 인식해.)');
     }
     return undefined;
   }
@@ -1440,7 +1444,7 @@ async function generate(...commandArgs){
     if(!stagedOk) { log('Aborted: no staged changes.'); return; }
 
     const cfg = getConfig();
-    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set kargnasCommitAI.apiKey first (legacy karsCommitAI.* is still read)');
+    if(!cfg.apiKey) return vscode.window.showErrorMessage('Set llmCommitMessage.apiKey first (legacy kargnasCommitAI.*, karsCommitAI.* are still read)');
 
     const context = await collectContext(repo, cfg);
     const baseSystemPrompt = cfg.systemPrompt || SYSTEM_PROMPT;
@@ -1608,9 +1612,63 @@ async function openInGitHub(uri){
   }
 }
 
+async function migrateSettings(){
+  const config = vscode.workspace.getConfiguration();
+  const newPrefix = SETTINGS_PREFIX;
+  let migrated = false;
+  const migratedKeys = [];
+
+  const settingsToMigrate = [
+    'apiKey', 'model', 'endpoint', 'endpointRewrite', 'transport',
+    'requestTimeoutMs', 'logRawResponse', 'contextIncludeGlobs',
+    'contextIgnoreGlobs', 'maxFilePatchBytes', 'maxPatchBytes',
+    'previousCommitLimit', 'openTabsLimit', 'terminalLogLines',
+    'projectTreeMaxEntries', 'heavyDiffMaxLines', 'heavyDiffMaxFiles',
+    'logPromptMaxChars', 'referer', 'title', 'commitLanguage', 'systemPrompt'
+  ];
+
+  for(const legacyPrefix of LEGACY_SETTINGS_PREFIXES){
+    for(const key of settingsToMigrate){
+      const legacyKey = `${legacyPrefix}.${key}`;
+      const newKey = `${newPrefix}.${key}`;
+      
+      const legacyValue = config.get(legacyKey);
+      const newValue = config.get(newKey);
+      
+      if(legacyValue !== undefined && newValue === undefined){
+        try {
+          await config.update(newKey, legacyValue, vscode.ConfigurationTarget.Global);
+          migrated = true;
+          migratedKeys.push(legacyKey);
+          log(`Migrated setting: ${legacyKey} -> ${newKey}`);
+        } catch(err){
+          log(`Failed to migrate ${legacyKey}: ${err?.message || err}`);
+        }
+      }
+    }
+  }
+
+  if(migrated){
+    const message = `LLM Commit Message: Settings migrated from old namespace (${migratedKeys.length} settings). You can remove old settings.`;
+    vscode.window.showInformationMessage(message);
+    log(message);
+  }
+}
+
 function activate(context){
-  log('Kargnas Commit AI activated at ' + new Date().toISOString());
+  log('LLM Commit Message activated at ' + new Date().toISOString());
+  
+  migrateSettings().catch(err => {
+    log('Settings migration failed: ' + (err?.message || err));
+  });
+  
   // Terminal capture removed: onDidWriteTerminalData requires proposed API
+  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.generate', generate));
+  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.pingOpenRouter', ping));
+  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.showLastPayload', showLast));
+  context.subscriptions.push(vscode.commands.registerCommand('llmCommitMessage.openInGitHub', openInGitHub));
+  
+  // Legacy command aliases for backward compatibility
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('kargnasCommitAI.showLastPayload', showLast));
@@ -1618,6 +1676,7 @@ function activate(context){
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.generate', generate));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.pingOpenRouter', ping));
   context.subscriptions.push(vscode.commands.registerCommand('karsCommitAI.showLastPayload', showLast));
+  
   registerPullRequestProvider(context);
 }
 
