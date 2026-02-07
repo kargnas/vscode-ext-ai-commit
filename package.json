@@ -2,7 +2,7 @@
   "name": "kargnas-ai-commit",
   "displayName": "Kargnas - AI Commit",
   "description": "AI-powered git commit messages via OpenRouter: GPT, Claude, Gemini & more. Rich context with diffs, tree, tabs, terminal logs. One-click Conventional Commits.",
-  "version": "0.3.48",
+  "version": "0.3.49",
   "publisher": "kargnas",
   "engines": {
     "vscode": "^1.84.0"
@@ -558,7 +558,10 @@
         },
         "llmCommitMessage.transport": {
           "type": "string",
-          "enum": ["fetch", "curl"],
+          "enum": [
+            "fetch",
+            "curl"
+          ],
           "default": "fetch",
           "description": "Deprecated alias for kargnas.aiCommit.transport.",
           "deprecationMessage": "Rename to kargnas.aiCommit.transport."
@@ -577,15 +580,29 @@
         },
         "llmCommitMessage.contextIncludeGlobs": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["**/*"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*"
+          ],
           "description": "Deprecated alias for kargnas.aiCommit.contextIncludeGlobs.",
           "deprecationMessage": "Rename to kargnas.aiCommit.contextIncludeGlobs."
         },
         "llmCommitMessage.contextIgnoreGlobs": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["**/*.lock", "dist/**", "build/**", "out/**", "**/*.svg", "**/*.png", "**/*.jpg"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*.lock",
+            "dist/**",
+            "build/**",
+            "out/**",
+            "**/*.svg",
+            "**/*.png",
+            "**/*.jpg"
+          ],
           "description": "Deprecated alias for kargnas.aiCommit.contextIgnoreGlobs.",
           "deprecationMessage": "Rename to kargnas.aiCommit.contextIgnoreGlobs."
         },
