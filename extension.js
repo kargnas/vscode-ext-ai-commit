@@ -1295,13 +1295,18 @@ async function httpPost(cfg, payload, prompts, cancellationToken){
       const res = await fetch(cfg.endpoint, { method:'POST', headers, body: JSON.stringify(payload), signal: controller.signal });
       const text = await res.text();
       if(cfg.logRaw) logSection('response', text.slice(0, 1000));
-      if(!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 400)}`);
+      if(!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 2000)}`);
       const ct = res.headers.get('content-type') || '';
       if(!ct.includes('json')) return text;
       try { return JSON.parse(text); } catch { return text; }
     } catch(err){
       if(err?.name === 'AbortError' || err?.message === 'The user aborted a request.'){
         throw new Error('Request cancelled');
+      }
+      // fetch() 자체가 실패한 경우(네트워크 오류 등) cause에 상세 원인이 담겨 있음
+      if(err?.cause){
+        const causeMsg = err.cause?.message || String(err.cause);
+        throw new Error(`${err.message} (cause: ${causeMsg})`);
       }
       throw err;
     } finally {
@@ -1463,8 +1468,13 @@ async function generate(...commandArgs){
     repo.inputBox.value = commitMessage;
     if(parsed.rationale) logSection('rationale', parsed.rationale);
   }catch(e){
-    log('Commit AI failed: ' + (e?.message || e));
-    vscode.window.showErrorMessage('Commit AI failed: ' + (e?.message || e));
+    const errDetail = e?.message || String(e);
+    log('Commit AI failed: ' + errDetail);
+    // 에러 메시지가 길 경우 showErrorMessage에서 잘릴 수 있으므로 앞 300자만 표시하고 전체는 Output에서 확인하도록 안내
+    const displayMsg = errDetail.length > 300
+      ? errDetail.slice(0, 300) + '... (see Output for full details)'
+      : errDetail;
+    vscode.window.showErrorMessage('Commit AI failed: ' + displayMsg);
   }
 }
 
