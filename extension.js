@@ -1510,6 +1510,9 @@ function gitRemoteToGitHubUrl(remoteUrl){
   const sshMatch = trimmed.match(/^git@github\.com[:/](.+?)(?:\.git)?$/);
   if(sshMatch) return `https://github.com/${sshMatch[1]}`;
   
+  const sshProtoMatch = trimmed.match(/^ssh:\/\/git@github\.com\/(.+?)(?:\.git)?$/);
+  if(sshProtoMatch) return `https://github.com/${sshProtoMatch[1]}`;
+  
   const httpsMatch = trimmed.match(/^https?:\/\/github\.com\/(.+?)(?:\.git)?$/);
   if(httpsMatch) return `https://github.com/${httpsMatch[1]}`;
   
