@@ -17,6 +17,12 @@ const SETTINGS_PREFIX = 'kargnas.aiCommit';
 
 function log(...args){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).appendLine(args.join(' ')); }
 function show(){ (out||=vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME)).show(true); }
+function offerShowLogs(){
+  vscode.window.showInformationMessage('Commit AI logs are available. View logs?', 'View Logs')
+    .then(selection => {
+      if(selection === 'View Logs') show();
+    });
+}
 function logSection(title, body){ log(`[${title}]`); (body||'').split(/\r?\n/).forEach(line=>log(line)); }
 
 function stripAnsi(text){
@@ -1250,7 +1256,7 @@ function isResponsesObject(obj){
 async function httpPost(cfg, payload, prompts, cancellationToken){
   lastPayload = payload;
   lastPayload.__meta = { prompts };
-  show();
+  offerShowLogs();
   const stamp = new Date().toISOString();
   log(`[info] ${stamp} model=${cfg.model}`);
   log(`[info] endpoint=${cfg.endpoint}`);
