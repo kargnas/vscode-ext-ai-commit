@@ -137,6 +137,7 @@
 - **AI Commit** (`kargnas.aiCommit.generate`) - 從暫存嘅改動生成提交訊息
 - **Ping OpenRouter** (`kargnas.aiCommit.pingOpenRouter`) - 測試 API 連線
 - **Show Last Payload** (`kargnas.aiCommit.showLastPayload`) - 睇返發送畀 AI 嘅最後一個提示詞
+- **Show Logs** (`kargnas.aiCommit.showLogs`) - 需要時開啟 AI Commit 輸出通道
 - **Open in GitHub** (`kargnas.aiCommit.openInGitHub`) - 喺 GitHub 度開而家嘅檔案(額外功能!)
 
 ## 🐛 疑難排解
