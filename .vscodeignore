@@ -22,3 +22,5 @@ out/test/**
 # Misc
 .DS_Store
 *.log
+.env*
+tmp/**
