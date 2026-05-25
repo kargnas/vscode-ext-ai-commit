@@ -137,6 +137,7 @@ AI がコードの変更内容を分析して、高品質な git コミットメ
 - **AI Commit** (`kargnas.aiCommit.generate`) - ステージされた変更からコミットメッセージを生成
 - **Ping OpenRouter** (`kargnas.aiCommit.pingOpenRouter`) - API 接続をテスト
 - **Show Last Payload** (`kargnas.aiCommit.showLastPayload`) - AI に送信した最後のプロンプトを表示
+- **Show Logs** (`kargnas.aiCommit.showLogs`) - 必要なときに AI Commit の出力チャンネルを開く
 - **Open in GitHub** (`kargnas.aiCommit.openInGitHub`) - 現在のファイルを GitHub で開く (ボーナス機能!)
 
 ## 🐛 トラブルシューティング
