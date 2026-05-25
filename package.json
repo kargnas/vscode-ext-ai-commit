@@ -60,6 +60,10 @@
         "title": "Commit AI: Show Last Payload"
       },
       {
+        "command": "kargnas.aiCommit.showLogs",
+        "title": "Commit AI: Show Logs"
+      },
+      {
         "command": "kargnas.aiCommit.openInGitHub",
         "title": "Open in GitHub",
         "icon": "$(github)"
