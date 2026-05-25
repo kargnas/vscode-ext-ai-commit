@@ -46,6 +46,7 @@ AI-powered git commit message generator for VS Code. One click, perfect [Convent
 - **AI Commit** — Generate commit message from staged changes
 - **Ping OpenRouter** — Test API connection
 - **Show Last Payload** — Debug prompt/context
+- **Show Logs** — Open the AI Commit output channel on demand
 - **Open in GitHub** — Open current file on GitHub
 
 ## License
