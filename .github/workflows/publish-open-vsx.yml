@@ -34,7 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
-        run: gh run download "$RUN_ID" --name llm-commit-message-vsix --dir dist
+        run: gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name llm-commit-message-vsix --dir dist
 
       - name: Checkout for manual publish
         if: github.event_name == 'workflow_dispatch'
