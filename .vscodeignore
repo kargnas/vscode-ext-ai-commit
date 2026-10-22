@@ -5,6 +5,7 @@
 .git/**
 .github/**
 .gitignore
+.nvmrc
 
 # Documentation & meta
 AGENTS.md
