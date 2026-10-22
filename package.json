@@ -5,8 +5,7 @@
   "version": "1.0.23",
   "publisher": "kargnas",
   "engines": {
-    "vscode": "^1.84.0",
-    "node": ">=24.22.1"
+    "vscode": "^1.84.0"
   },
   "categories": [
     "SCM Providers",
